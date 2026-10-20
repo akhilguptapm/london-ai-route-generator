@@ -243,7 +243,7 @@ export default function Home() {
             {/* Days Loop */}
             {itinerary.days?.map((day, dayIdx) => (
               <div
-                key={day?.dayNumber ?? dayIdx}
+                key={dayIdx}
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-slate-800 pb-4">

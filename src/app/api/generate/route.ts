@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       ? liveTours
           .map(({ query, tours }) => `- ${query}: ${JSON.stringify(tours[0])}`)
           .join("\n")
-      : "No live tour data available. Omit 'liveTourRecommendation'.";
+      : "No live tour data available. Set 'liveTourRecommendation' to null.";
 
     const systemPrompt = `
       You are an expert London Route Planner, Transit Specialist, and Affiliate Optimization Engine.

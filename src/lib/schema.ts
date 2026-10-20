@@ -24,7 +24,8 @@ export const ItinerarySchema = z.object({
               rating: z.number(),
               bookingUrl: z.string()
             })
-            .optional()
+            .nullable()
+            .describe("Live tour to recommend, or null if no live tour data matches")
         })
       )
     })
