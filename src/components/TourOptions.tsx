@@ -15,7 +15,7 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
 
   return (
     <div
-      className={`flex gap-3 bg-slate-900 border rounded-lg p-3 ${
+      className={`flex flex-col sm:flex-row gap-3 bg-slate-900 border rounded-lg p-3 ${
         unavailable ? "border-slate-800 opacity-60" : "border-slate-700"
       }`}
     >
@@ -25,7 +25,7 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
           src={tour.imageUrl}
           alt=""
           loading="lazy"
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-md object-cover shrink-0"
+          className="w-full h-36 sm:w-24 sm:h-24 rounded-md object-cover shrink-0"
         />
       )}
 
@@ -90,7 +90,7 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
             href={tour.bookingUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300"
+            className="inline-flex items-center gap-1.5 py-1.5 text-xs font-bold text-sky-400 hover:text-sky-300"
           >
             View on Viator <ExternalLink className="w-3 h-3" />
           </a>
@@ -121,7 +121,7 @@ export function TourOptions({
   if (!tours || tours.length === 0) return null;
 
   return (
-    <div className="bg-slate-950 border border-purple-500/20 rounded-xl p-4 space-y-3 mt-2">
+    <div className="bg-slate-950 border border-purple-500/20 rounded-xl p-3 sm:p-4 space-y-3 mt-2">
       <div className="text-xs text-purple-400 font-semibold uppercase tracking-wider">
         Book tours &amp; tickets · live from Viator
       </div>

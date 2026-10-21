@@ -128,14 +128,14 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <main className="min-h-dvh bg-slate-950 text-slate-100 px-3 py-4 sm:p-6 md:p-8 font-sans">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         {/* Header Section */}
-        <header className="text-center space-y-3 py-6 border-b border-slate-800">
-          <div className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-sm font-semibold border border-amber-500/20">
-            <Sparkles className="w-4 h-4" /> AI Route & Itinerary Generator
+        <header className="text-center space-y-3 py-4 sm:py-6 border-b border-slate-800">
+          <div className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold border border-amber-500/20">
+            <Sparkles className="w-4 h-4 shrink-0" /> AI Route & Itinerary Generator
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white text-balance break-words">
             AI-Powered London Itinerary & Custom Tour Planner
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base">
@@ -146,9 +146,9 @@ export default function Home() {
         {/* Form Controls */}
         <form
           onSubmit={handleGenerate}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl"
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Days Counter */}
             <div className="space-y-2">
               <label
@@ -226,7 +226,7 @@ export default function Home() {
                 value={travelDate}
                 min={minDate || undefined}
                 onChange={(e) => setTravelDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none [color-scheme:dark]"
+                className="block w-full min-w-0 min-h-12 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none [color-scheme:dark]"
               />
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function Home() {
                     key={interest}
                     aria-pressed={active}
                     onClick={() => toggleInterest(interest)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    className={`px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-medium transition-all ${
                       active
                         ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
                         : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
@@ -259,7 +259,7 @@ export default function Home() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex gap-4 pt-2">
+          <div className="flex gap-3 sm:gap-4 pt-2">
             <button
               type="submit"
               disabled={isLoading}
@@ -319,14 +319,14 @@ export default function Home() {
         {itinerary && (
           <div className="space-y-8 animate-fade-in">
             {/* Overview Header Card */}
-            <div className="bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 border border-sky-500/30 rounded-2xl p-6 space-y-3">
+            <div className="bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 border border-sky-500/30 rounded-2xl p-4 sm:p-6 space-y-3">
               <div className="flex flex-wrap justify-between items-start gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-sky-400">{itinerary.tripTitle}</h2>
+                <div className="min-w-0 flex-1 basis-64">
+                  <h2 className="text-xl sm:text-2xl font-bold text-sky-400 break-words">{itinerary.tripTitle}</h2>
                   <p className="text-slate-300 text-sm mt-1">{itinerary.summary}</p>
                 </div>
                 {itinerary.estimatedPassSavings && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-center">
+                  <div className="w-full sm:w-auto bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-center">
                     <span className="text-xs block uppercase font-bold text-emerald-500">
                       London Pass Savings
                     </span>
@@ -340,21 +340,21 @@ export default function Home() {
             {itinerary.days?.map((day, dayIdx) => (
               <div
                 key={dayIdx}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6"
+                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-                  <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap">
+                  <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap shrink-0">
                     Day {day?.dayNumber ?? dayIdx + 1}
                   </div>
-                  <h3 className="text-xl font-bold text-white">{day?.theme}</h3>
+                  <h3 className="min-w-0 text-lg sm:text-xl font-bold text-white break-words">{day?.theme}</h3>
                 </div>
 
                 {/* Schedule Timeline */}
-                <div className="space-y-6 relative border-l-2 border-slate-800 ml-4 pl-6">
+                <div className="space-y-6 relative border-l-2 border-slate-800 ml-2 pl-5 sm:ml-4 sm:pl-6">
                   {day?.schedule?.map((item, idx) => (
-                    <div key={idx} className="relative space-y-3 group">
+                    <div key={idx} className="relative space-y-3 group min-w-0">
                       {/* Timeline Indicator Node */}
-                      <span className="absolute -left-[33px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-sky-400 group-hover:bg-sky-400 transition" />
+                      <span className="absolute -left-[29px] sm:-left-[33px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-sky-400 group-hover:bg-sky-400 transition" />
 
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-sky-400 bg-sky-950 px-2.5 py-1 rounded-md border border-sky-800">
@@ -367,7 +367,7 @@ export default function Home() {
                         )}
                       </div>
 
-                      <h4 className="text-lg font-bold text-slate-100">{item?.attractionName}</h4>
+                      <h4 className="text-base sm:text-lg font-bold text-slate-100 break-words">{item?.attractionName}</h4>
                       <p className="text-slate-400 text-sm">{item?.description}</p>
 
                       {/* Transit Instructions */}
