@@ -3,7 +3,6 @@ import { z } from "zod";
 export const ItinerarySchema = z.object({
   tripTitle: z.string().describe("Catchy title for the generated London itinerary"),
   summary: z.string().describe("Brief overview of the route strategy and pacing"),
-  estimatedPassSavings: z.string().describe("Estimated savings in US dollars (use the $ symbol, e.g. $95) if using London Pass"),
   days: z.array(
     z.object({
       dayNumber: z.number(),
@@ -15,7 +14,6 @@ export const ItinerarySchema = z.object({
           category: z.enum(["must-see", "palace", "museum", "family", "dining", "transit"]),
           description: z.string().describe("Short tip or historical context"),
           transitTip: z.string().describe("Tube/Bus route from previous stop"),
-          isLondonPassIncluded: z.boolean(),
           tourSearchTerm: z
             .string()
             .nullable()

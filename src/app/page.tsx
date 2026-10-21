@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useObject } from "@ai-sdk/react";
 import { ItinerarySchema } from "@/lib/schema";
 import { TourOptions } from "@/components/TourOptions";
 import { TourFallback, hasNoBookableTours } from "@/components/TourFallback";
 import { getGoCityLondonPassLink } from "@/lib/affiliates";
-import { toUSDText } from "@/lib/london-pass";
+import {
+  calculatePassSavings,
+  formatSavingsRange,
+  matchGoCityAttraction,
+  viatorEntryPriceUSD,
+} from "@/lib/pass-savings";
 import type { ToursApiResponse, ViatorTour } from "@/lib/tour-types";
 import {
   Compass,
@@ -70,6 +75,24 @@ export default function Home() {
   });
 
   const adults = ADULTS_BY_TRAVELERS[travelers] ?? 2;
+
+  // Pass savings are calculated (not AI-written): Go City's published USD gate prices, cross-checked against
+  // live Viator entry-ticket prices where Viator sells the same attraction. Shown as an estimated range.
+  const hasTourTerms = Boolean(
+    itinerary?.days?.some((d) => d?.schedule?.some((s) => s?.tourSearchTerm?.trim()))
+  );
+  const savingsReady =
+    !isLoading && Boolean(itinerary?.days?.length) && (toursStatus === "done" || toursStatus === "error" || !hasTourTerms);
+  const passRec = useMemo(
+    () =>
+      savingsReady
+        ? calculatePassSavings(itinerary?.days, (stop) => {
+            const term = stop.tourSearchTerm?.trim();
+            return term ? viatorEntryPriceUSD(tourData[term], adults) : null;
+          })
+        : null,
+    [savingsReady, itinerary?.days, tourData, adults]
+  );
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests((prev) =>
@@ -376,8 +399,8 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Interactive London Pass Savings Banner */}
-              {itinerary.estimatedPassSavings && (
+              {/* Interactive London Pass Savings Banner (only once the itinerary is complete) */}
+              {savingsReady && (
                 <a
                   href={getGoCityLondonPassLink()}
                   target="_blank"
@@ -392,9 +415,48 @@ export default function Home() {
                       <div className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
                         Exclusive Pass Savings
                       </div>
-                      <div className="text-base sm:text-lg font-bold text-white">
-                        Unlock {toUSDText(itinerary.estimatedPassSavings)} Sightseeing Pass Savings — Get Yours Today
-                      </div>
+                      {passRec && passRec.savingsLowUSD >= 1 ? (
+                        <>
+                          <div className="text-base sm:text-lg font-bold text-white">
+                            Unlock {formatSavingsRange(passRec)} Sightseeing Pass Savings — Get Yours Today
+                          </div>
+                          <div className="text-xs text-emerald-100/80 mt-0.5">
+                            Estimated Pass Savings: {formatSavingsRange(passRec)} per person (based on{" "}
+                            {passRec.liveRatesUsed > 0
+                              ? "live individual gate entry rates"
+                              : "current individual gate entry rates"}
+                            )
+                          </div>
+                          <div className="text-xs text-emerald-200/60 mt-0.5">
+                            {passRec.passLabel} (${passRec.passPriceUSD}) covers {passRec.coveredCount} attraction
+                            {passRec.coveredCount === 1 ? "" : "s"} worth about ${passRec.gateTotalLowUSD.toLocaleString("en-US")}
+                            {passRec.gateTotalHighUSD > passRec.gateTotalLowUSD
+                              ? `–$${passRec.gateTotalHighUSD.toLocaleString("en-US")}`
+                              : ""}{" "}
+                            at the gate. Estimates only; prices can change.
+                          </div>
+                        </>
+                      ) : passRec ? (
+                        <>
+                          <div className="text-base sm:text-lg font-bold text-white">
+                            Add more sights to unlock Go City pass savings — Get Yours Today
+                          </div>
+                          <div className="text-xs text-emerald-100/80 mt-0.5">
+                            This plan has {passRec.coveredCount} pass-covered attraction
+                            {passRec.coveredCount === 1 ? "" : "s"} worth about $
+                            {passRec.gateTotalLowUSD.toLocaleString("en-US")} per person at the gate, versus $
+                            {passRec.passPriceUSD} for the {passRec.passLabel}
+                            {passRec.gateTotalHighUSD >= passRec.passPriceUSD - 15
+                              ? " — roughly break-even."
+                              : " — the pass would cost more than paying at the gate."}{" "}
+                            Passes start saving with more paid attractions per day.
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-base sm:text-lg font-bold text-white">
+                          Compare Go City London Pass options — Get Yours Today
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -430,7 +492,7 @@ export default function Home() {
                         <span className="text-xs font-semibold text-sky-400 bg-sky-950 px-2.5 py-1 rounded-md border border-sky-800">
                           {item?.timeSlot}
                         </span>
-                        {item?.isLondonPassIncluded && (
+                        {!isLoading && matchGoCityAttraction(item?.attractionName) && (
                           <a
                             href={getGoCityLondonPassLink()}
                             target="_blank"
@@ -480,7 +542,7 @@ export default function Home() {
                                   altTourData[item.fallback.nearbyAlternative.tourSearchTerm.trim()]
                                 : undefined
                             }
-                            isLondonPassIncluded={Boolean(item.isLondonPassIncluded)}
+                            isLondonPassIncluded={Boolean(matchGoCityAttraction(item.attractionName))}
                           />
                         )}
                     </div>
