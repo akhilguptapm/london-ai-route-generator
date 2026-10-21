@@ -136,10 +136,10 @@ export default function Home() {
             <Sparkles className="w-4 h-4" /> AI Route & Itinerary Generator
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
-            London Interactive AI Itinerary Planner
+            AI-Powered London Itinerary & Custom Tour Planner
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base">
-            Build custom day-by-day travel routes optimized by geographic clusters, tube transfers, live ticket availability, and London Pass savings.
+            Plan custom London itineraries in seconds. Get AI-optimized routes, tube transit tips, live tour ticket rates, and London Pass savings. Build your route now!
           </p>
         </header>
 

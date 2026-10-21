@@ -13,9 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "London AI Itinerary Planner",
+  title: "AI London Itinerary & Custom Tour Planner | London Tour Package",
   description:
-    "Build custom day-by-day London routes with tube transfers, live tour rates, and London Pass savings.",
+    "Plan custom London itineraries in seconds. Get AI-optimized routes, tube transit tips, live tour ticket rates, and London Pass savings. Build your route now!",
+  openGraph: {
+    title: "AI London Itinerary & Custom Tour Planner",
+    description:
+      "Generate custom London travel routes with live partner pricing and pass savings.",
+    url: "https://tourplanner.londontourpackage.com",
+    siteName: "London Tour Package",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
