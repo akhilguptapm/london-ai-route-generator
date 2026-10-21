@@ -7,6 +7,11 @@ export const ItinerarySchema = z.object({
     z.object({
       dayNumber: z.number(),
       theme: z.string().describe("Theme for the day, e.g., Historical Palaces & Westminster"),
+      dayDescription: z
+        .string()
+        .describe(
+          "1-2 sentences previewing what the traveller will explore and visit that day (the main sights and the feel of the day)."
+        ),
       schedule: z.array(
         z.object({
           timeSlot: z.string().describe("e.g. 09:00 AM - 11:30 AM"),

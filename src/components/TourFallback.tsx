@@ -85,7 +85,7 @@ function ActionLink({
       href={href}
       target="_blank"
       rel={sponsored ? "noopener noreferrer sponsored" : "noopener noreferrer"}
-      className="inline-flex items-center gap-1.5 py-1 text-xs font-bold text-sky-400 hover:text-sky-300"
+      className="inline-flex items-center gap-1.5 py-1 text-xs font-bold text-sky-700 hover:text-sky-600"
     >
       <Icon className="w-3 h-3" />
       {children}
@@ -119,17 +119,17 @@ export function TourFallback({
   const altBooking = alternativeTours?.find((t) => t.availability?.status !== "unavailable");
 
   return (
-    <div className="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3 sm:p-4 space-y-3">
-      <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 sm:p-4 space-y-3">
+      <div className="text-xs font-bold uppercase tracking-wider text-amber-700">
         Alternate Route Suggestion
       </div>
-      <div className="flex items-start gap-2 text-sm text-amber-200">
-        <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+      <div className="flex items-start gap-2 text-sm text-amber-900">
+        <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
         <p>
           {date
             ? `No tours or tickets for ${attractionName} are available on ${formatDate(date)}.`
             : `No tours or tickets for ${attractionName} are available right now.`}{" "}
-          <span className="text-amber-300/80">
+          <span className="text-amber-800">
             Here&apos;s an alternate route so this slot is still worth it
             {isLondonPassIncluded && (
               <>
@@ -139,7 +139,7 @@ export function TourFallback({
                   href={getGoCityLondonPassLink()}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
-                  className="font-semibold text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                  className="font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-950"
                 >
                   check the official site
                 </a>{" "}
@@ -153,13 +153,13 @@ export function TourFallback({
 
       <ul className="space-y-2 text-sm">
         {fallback.photoTip && (
-          <li className="flex items-start gap-2.5 bg-slate-950/60 border border-slate-800 rounded-lg p-3">
-            <Camera className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+          <li className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <Camera className="w-4 h-4 shrink-0 mt-0.5 text-sky-700" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-wider text-sky-400">
+              <div className="text-xs font-semibold uppercase tracking-wider text-sky-700">
                 See it from outside
               </div>
-              <p className="text-slate-300">{fallback.photoTip}</p>
+              <p className="text-slate-700">{fallback.photoTip}</p>
               <ActionLink href={mapsUrl(attractionName)} icon={MapPin}>
                 View on Maps
               </ActionLink>
@@ -168,13 +168,13 @@ export function TourFallback({
         )}
 
         {alt?.name && (
-          <li className="flex items-start gap-2.5 bg-slate-950/60 border border-slate-800 rounded-lg p-3">
-            <Compass className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+          <li className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <Compass className="w-4 h-4 shrink-0 mt-0.5 text-emerald-700" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
                 Nearby alternative · {alt.name}
               </div>
-              <p className="text-slate-300">{alt.description}</p>
+              <p className="text-slate-700">{alt.description}</p>
               <div className="flex flex-wrap gap-x-4">
                 <ActionLink href={mapsUrl(alt.name)} icon={MapPin}>
                   View on Maps
@@ -190,13 +190,13 @@ export function TourFallback({
         )}
 
         {meal?.name && mealType && (
-          <li className="flex items-start gap-2.5 bg-slate-950/60 border border-slate-800 rounded-lg p-3">
-            <MealIcon className="w-4 h-4 shrink-0 mt-0.5 text-purple-400" />
+          <li className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <MealIcon className="w-4 h-4 shrink-0 mt-0.5 text-purple-700" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+              <div className="text-xs font-semibold uppercase tracking-wider text-purple-700">
                 {mealLabel(mealType)} · {meal.name}
               </div>
-              <p className="text-slate-300">{meal.description}</p>
+              <p className="text-slate-700">{meal.description}</p>
               <ActionLink href={mapsUrl(meal.name)} icon={MapPin}>
                 View on Maps
               </ActionLink>

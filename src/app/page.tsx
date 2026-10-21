@@ -23,6 +23,7 @@ import {
   Users,
   AlertTriangle,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 
 const AVAILABLE_INTERESTS = [
@@ -47,6 +48,10 @@ export default function Home() {
   const [pace, setPace] = useState<string>("Balanced");
   const [travelers, setTravelers] = useState<string>("Couple / 2 Adults");
   const [travelDate, setTravelDate] = useState<string>("");
+  // Which day cards are expanded, keyed by day index (unset = default: only Day 1 open).
+  const [openDays, setOpenDays] = useState<Record<number, boolean>>({});
+  // Number of days asked for in the last generation (so the "missing days" notice ignores later form edits).
+  const [requestedDays, setRequestedDays] = useState<number | null>(null);
   // Set on the client after mount (can't read the current time during prerender)
   const [minDate, setMinDate] = useState<string>("");
   useEffect(() => {
@@ -75,6 +80,9 @@ export default function Home() {
   });
 
   const adults = ADULTS_BY_TRAVELERS[travelers] ?? 2;
+
+  // Days that actually came back with a theme and stops (the stream can end with an empty trailing day).
+  const plannedDays = (itinerary?.days ?? []).filter((d) => d?.theme?.trim() && d?.schedule?.length).length;
 
   // Pass savings are calculated (not AI-written): Go City's published USD gate prices, cross-checked against
   // live Viator entry-ticket prices where Viator sells the same attraction. Shown as an estimated range.
@@ -190,6 +198,8 @@ export default function Home() {
     altFetchKey.current = null;
     setAltTourData({});
     setTourData({});
+    setOpenDays({});
+    setRequestedDays(days);
     setToursStatus("idle");
     submit({
       days,
@@ -200,17 +210,17 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-dvh bg-slate-950 text-slate-100 px-3 py-4 sm:p-6 md:p-8 font-sans">
+    <main className="min-h-dvh bg-white text-slate-900 px-3 py-4 sm:p-6 md:p-8 font-sans">
       <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         {/* Header Section */}
-        <header className="text-center space-y-3 py-4 sm:py-6 border-b border-slate-800">
-          <div className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold border border-amber-500/20">
+        <header className="text-center space-y-3 py-4 sm:py-6 border-b border-slate-200">
+          <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold border border-amber-200">
             <Sparkles className="w-4 h-4 shrink-0" /> AI Route & Itinerary Generator
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white text-balance break-words">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 text-balance break-words">
             AI-Powered London Itinerary & Custom Tour Planner
           </h1>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base">
+          <p className="text-slate-600 max-w-2xl mx-auto text-sm md:text-base">
             Plan custom London itineraries in seconds. Get AI-optimized routes, tube transit tips, live tour ticket rates, and London Pass savings. Build your route now!
           </p>
         </header>
@@ -218,22 +228,22 @@ export default function Home() {
         {/* Form Controls */}
         <form
           onSubmit={handleGenerate}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl"
+          className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Days Counter */}
             <div className="space-y-2">
               <label
                 htmlFor="days"
-                className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2"
               >
-                <Calendar className="w-4 h-4 text-sky-400" /> Trip Duration
+                <Calendar className="w-4 h-4 text-sky-700" /> Trip Duration
               </label>
               <select
                 id="days"
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-sky-500 focus:outline-none"
               >
                 {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                   <option key={num} value={num}>
@@ -247,15 +257,15 @@ export default function Home() {
             <div className="space-y-2">
               <label
                 htmlFor="pace"
-                className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2"
               >
-                <Clock className="w-4 h-4 text-emerald-400" /> Travel Pace
+                <Clock className="w-4 h-4 text-emerald-700" /> Travel Pace
               </label>
               <select
                 id="pace"
                 value={pace}
                 onChange={(e) => setPace(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 <option value="Relaxed">Relaxed (2 sights/day)</option>
                 <option value="Balanced">Balanced (3 sights/day)</option>
@@ -267,15 +277,15 @@ export default function Home() {
             <div className="space-y-2">
               <label
                 htmlFor="travelers"
-                className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2"
               >
-                <Users className="w-4 h-4 text-purple-400" /> Travelers
+                <Users className="w-4 h-4 text-purple-700" /> Travelers
               </label>
               <select
                 id="travelers"
                 value={travelers}
                 onChange={(e) => setTravelers(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               >
                 <option value="Solo Traveler">Solo Traveler</option>
                 <option value="Couple / 2 Adults">Couple / 2 Adults</option>
@@ -288,9 +298,9 @@ export default function Home() {
             <div className="space-y-2">
               <label
                 htmlFor="travelDate"
-                className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2"
               >
-                <Ticket className="w-4 h-4 text-amber-400" /> Travel Date (optional)
+                <Ticket className="w-4 h-4 text-amber-700" /> Travel Date (optional)
               </label>
               <input
                 id="travelDate"
@@ -298,14 +308,14 @@ export default function Home() {
                 value={travelDate}
                 min={minDate || undefined}
                 onChange={(e) => setTravelDate(e.target.value)}
-                className="block w-full min-w-0 min-h-12 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none [color-scheme:dark]"
+                className="block w-full min-w-0 min-h-12 bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Interests Pills */}
           <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
               Select Your Interests
             </span>
             <div className="flex flex-wrap gap-2">
@@ -320,7 +330,7 @@ export default function Home() {
                     className={`px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-medium transition-all ${
                       active
                         ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                     }`}
                   >
                     {interest}
@@ -352,7 +362,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => stop()}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-3 rounded-xl transition"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-3 rounded-xl transition"
               >
                 Stop
               </button>
@@ -364,7 +374,7 @@ export default function Home() {
         {error && (
           <div
             role="alert"
-            className="bg-red-950/50 border border-red-500/30 text-red-300 rounded-xl p-4 text-sm flex items-start gap-2"
+            className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm flex items-start gap-2"
           >
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>
@@ -373,29 +383,32 @@ export default function Home() {
           </div>
         )}
 
-        {!isLoading && toursStatus === "error" && (
-          <div className="bg-amber-950/40 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm flex items-start gap-2">
+        {!isLoading && !error && itinerary?.days && requestedDays !== null && plannedDays < requestedDays && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Live tour prices are temporarily unavailable. Your itinerary is still ready to use.</span>
+            <span>
+              We could only plan {plannedDays} of your {requestedDays} days. Please
+              generate again to get the full trip.
+            </span>
           </div>
         )}
 
-        {!isLoading && toursStatus === "done" && (
-          <p className="text-xs text-slate-500 text-center">
-            Tour prices and availability are fetched live from Viator. We may earn a commission if you book,
-            at no extra cost to you.
-          </p>
+        {!isLoading && toursStatus === "error" && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>Live tour prices are temporarily unavailable. Your itinerary is still ready to use.</span>
+          </div>
         )}
 
         {/* Results Container */}
         {itinerary && (
           <div className="space-y-8 animate-fade-in">
             {/* Overview Header Card */}
-            <div className="bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 border border-sky-500/30 rounded-2xl p-4 sm:p-6 space-y-3">
+            <div className="bg-gradient-to-r from-sky-50 via-white to-indigo-50 border border-sky-200 rounded-2xl p-4 sm:p-6 space-y-3">
               <div className="flex flex-wrap justify-between items-start gap-4">
                 <div className="min-w-0 flex-1 basis-64">
-                  <h2 className="text-xl sm:text-2xl font-bold text-sky-400 break-words">{itinerary.tripTitle}</h2>
-                  <p className="text-slate-300 text-sm mt-1">{itinerary.summary}</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-sky-700 break-words">{itinerary.tripTitle}</h2>
+                  <p className="text-slate-700 text-sm mt-1">{itinerary.summary}</p>
                 </div>
               </div>
 
@@ -405,29 +418,29 @@ export default function Home() {
                   href={getGoCityLondonPassLink()}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
-                  className="inline-flex flex-wrap items-center justify-between gap-3 w-full p-4 mt-4 bg-emerald-950/60 border border-emerald-500/40 rounded-xl hover:bg-emerald-900/60 transition-all group cursor-pointer shadow-lg"
+                  className="inline-flex flex-wrap items-center justify-between gap-3 w-full p-4 mt-4 bg-emerald-50 border border-emerald-300 rounded-xl hover:bg-emerald-100 transition-all group cursor-pointer shadow-lg"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xl font-bold shrink-0">
+                    <span className="p-2 bg-emerald-100 text-emerald-700 rounded-lg text-xl font-bold shrink-0">
                       $
                     </span>
                     <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
+                      <div className="text-xs uppercase tracking-wider text-emerald-700 font-semibold">
                         Exclusive Pass Savings
                       </div>
                       {passRec && passRec.savingsLowUSD >= 1 ? (
                         <>
-                          <div className="text-base sm:text-lg font-bold text-white">
+                          <div className="text-base sm:text-lg font-bold text-slate-900">
                             Unlock {formatSavingsRange(passRec)} Sightseeing Pass Savings — Get Yours Today
                           </div>
-                          <div className="text-xs text-emerald-100/80 mt-0.5">
+                          <div className="text-xs text-emerald-800 mt-0.5">
                             Estimated Pass Savings: {formatSavingsRange(passRec)} per person (based on{" "}
                             {passRec.liveRatesUsed > 0
                               ? "live individual gate entry rates"
                               : "current individual gate entry rates"}
                             )
                           </div>
-                          <div className="text-xs text-emerald-200/60 mt-0.5">
+                          <div className="text-xs text-emerald-700/80 mt-0.5">
                             {passRec.passLabel} (${passRec.passPriceUSD}) covers {passRec.coveredCount} attraction
                             {passRec.coveredCount === 1 ? "" : "s"} worth about ${passRec.gateTotalLowUSD.toLocaleString("en-US")}
                             {passRec.gateTotalHighUSD > passRec.gateTotalLowUSD
@@ -438,10 +451,10 @@ export default function Home() {
                         </>
                       ) : passRec ? (
                         <>
-                          <div className="text-base sm:text-lg font-bold text-white">
+                          <div className="text-base sm:text-lg font-bold text-slate-900">
                             Add more sights to unlock Go City pass savings — Get Yours Today
                           </div>
-                          <div className="text-xs text-emerald-100/80 mt-0.5">
+                          <div className="text-xs text-emerald-800 mt-0.5">
                             This plan has {passRec.coveredCount} pass-covered attraction
                             {passRec.coveredCount === 1 ? "" : "s"} worth about $
                             {passRec.gateTotalLowUSD.toLocaleString("en-US")} per person at the gate, versus $
@@ -453,7 +466,7 @@ export default function Home() {
                           </div>
                         </>
                       ) : (
-                        <div className="text-base sm:text-lg font-bold text-white">
+                        <div className="text-base sm:text-lg font-bold text-slate-900">
                           Compare Go City London Pass options — Get Yours Today
                         </div>
                       )}
@@ -469,27 +482,73 @@ export default function Home() {
             </div>
 
             {/* Days Loop */}
-            {itinerary.days?.map((day, dayIdx) => (
+            {itinerary.days?.map((day, dayIdx) => {
+              // Day 1 starts open; the rest start collapsed until the user expands them.
+              const isOpen = openDays[dayIdx] ?? dayIdx === 0;
+              const panelId = `day-panel-${dayIdx}`;
+
+              // A day streams in piece by piece. Until it has a theme and at least one stop it is
+              // empty: show a placeholder while the AI is still writing, and hide it if it never filled in.
+              const hasContent = Boolean(day?.theme?.trim()) && (day?.schedule?.length ?? 0) > 0;
+              if (!hasContent) {
+                if (!isLoading) return null;
+                return (
+                  <div
+                    key={dayIdx}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 flex items-center gap-3"
+                  >
+                    <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap shrink-0">
+                      Day {day?.dayNumber ?? dayIdx + 1}
+                    </div>
+                    <span className="text-sm text-slate-600 flex items-center gap-2">
+                      <Compass className="w-4 h-4 animate-spin" /> Planning this day…
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
               <div
                 key={dayIdx}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6"
+                className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6"
               >
-                <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-                  <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap shrink-0">
-                    Day {day?.dayNumber ?? dayIdx + 1}
-                  </div>
-                  <h3 className="min-w-0 text-lg sm:text-xl font-bold text-white break-words">{day?.theme}</h3>
+                <div className={isOpen ? "border-b border-slate-200 pb-4" : ""}>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => setOpenDays((prev) => ({ ...prev, [dayIdx]: !isOpen }))}
+                    className="w-full flex items-center gap-3 text-left cursor-pointer"
+                  >
+                    <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap shrink-0">
+                      Day {day?.dayNumber ?? dayIdx + 1}
+                    </div>
+                    <h3 className="min-w-0 flex-1 text-lg sm:text-xl font-bold text-slate-900 break-words">{day?.theme}</h3>
+                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-sky-700 shrink-0">
+                      <span>{isOpen ? "Collapse" : `Expand Day ${day?.dayNumber ?? dayIdx + 1}`}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </span>
+                  </button>
+                  {day?.dayDescription && (
+                    <p className="text-slate-600 text-sm mt-3">{day.dayDescription}</p>
+                  )}
                 </div>
 
                 {/* Schedule Timeline */}
-                <div className="space-y-6 relative border-l-2 border-slate-800 ml-2 pl-5 sm:ml-4 sm:pl-6">
+                {isOpen && (
+                <div
+                  id={panelId}
+                  className="space-y-6 relative border-l-2 border-slate-200 ml-2 pl-5 sm:ml-4 sm:pl-6"
+                >
                   {day?.schedule?.map((item, idx) => (
                     <div key={idx} className="relative space-y-3 group min-w-0">
                       {/* Timeline Indicator Node */}
-                      <span className="absolute -left-[29px] sm:-left-[33px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-sky-400 group-hover:bg-sky-400 transition" />
+                      <span className="absolute -left-[29px] sm:-left-[33px] top-1 w-4 h-4 rounded-full bg-white border-2 border-sky-400 group-hover:bg-sky-400 transition" />
 
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-sky-400 bg-sky-950 px-2.5 py-1 rounded-md border border-sky-800">
+                        <span className="text-xs font-semibold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md border border-sky-200">
                           {item?.timeSlot}
                         </span>
                         {!isLoading && matchGoCityAttraction(item?.attractionName) && (
@@ -497,7 +556,7 @@ export default function Home() {
                             href={getGoCityLondonPassLink()}
                             target="_blank"
                             rel="noopener noreferrer sponsored"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-400 rounded-full text-xs font-semibold transition-all hover:bg-emerald-500/20"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-300 hover:border-emerald-500 text-emerald-700 rounded-full text-xs font-semibold transition-all hover:bg-emerald-100"
                           >
                             <span>✓ Included with London Pass</span>
                             <span className="font-extrabold underline underline-offset-2">Book Pass</span>
@@ -505,13 +564,13 @@ export default function Home() {
                         )}
                       </div>
 
-                      <h4 className="text-base sm:text-lg font-bold text-slate-100 break-words">{item?.attractionName}</h4>
-                      <p className="text-slate-400 text-sm">{item?.description}</p>
+                      <h4 className="text-base sm:text-lg font-bold text-slate-900 break-words">{item?.attractionName}</h4>
+                      <p className="text-slate-600 text-sm">{item?.description}</p>
 
                       {/* Transit Instructions */}
                       {item?.transitTip && (
-                        <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-3 text-xs text-slate-400 flex items-start gap-2">
-                          <Train className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 flex items-start gap-2">
+                          <Train className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                           <span>{item.transitTip}</span>
                         </div>
                       )}
@@ -548,8 +607,10 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

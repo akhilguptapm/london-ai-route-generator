@@ -31,6 +31,8 @@ export async function POST(req: Request) {
          (set its 'tourSearchTerm' to the official name if it is ticketed, so it can be booked, else null), and a
          real nearby cafe/restaurant matching the time slot (lunch around midday, dinner in the evening, otherwise
          coffee). Use only real, well-known places; never invent venues. Set 'fallback' to null when 'tourSearchTerm' is null.
+      6. For every day, write 'dayDescription': 1-2 friendly sentences previewing what the traveller will explore and
+         visit that day (name the headline sights and the overall feel). No prices, no URLs.
     `;
 
     const userPrompt = `
