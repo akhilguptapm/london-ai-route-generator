@@ -38,6 +38,11 @@ export default function Home() {
   const [pace, setPace] = useState<string>("Balanced");
   const [travelers, setTravelers] = useState<string>("Couple / 2 Adults");
   const [travelDate, setTravelDate] = useState<string>("");
+  // Set on the client after mount (can't read the current time during prerender)
+  const [minDate, setMinDate] = useState<string>("");
+  useEffect(() => {
+    setMinDate(new Date().toISOString().slice(0, 10));
+  }, []);
   const [tourData, setTourData] = useState<Record<string, ViatorTour[]>>({});
   const [toursStatus, setToursStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const fetchKey = useRef<string | null>(null);
@@ -219,7 +224,7 @@ export default function Home() {
                 id="travelDate"
                 type="date"
                 value={travelDate}
-                min={new Date().toISOString().slice(0, 10)}
+                min={minDate || undefined}
                 onChange={(e) => setTravelDate(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none [color-scheme:dark]"
               />
