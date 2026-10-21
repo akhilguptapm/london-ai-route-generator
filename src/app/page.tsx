@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useObject } from "@ai-sdk/react";
 import { ItinerarySchema } from "@/lib/schema";
+import { TourOptions } from "@/components/TourOptions";
+import type { ToursApiResponse, ViatorTour } from "@/lib/tour-types";
 import {
   Compass,
   Clock,
   Train,
   Ticket,
   Sparkles,
-  ExternalLink,
   Calendar,
   Users,
   AlertTriangle,
@@ -24,10 +25,22 @@ const AVAILABLE_INTERESTS = [
   "Parks & Views",
 ];
 
+// Party size used for live Viator price / availability checks (adult pricing).
+const ADULTS_BY_TRAVELERS: Record<string, number> = {
+  "Solo Traveler": 1,
+  "Couple / 2 Adults": 2,
+  "Family with Kids": 4,
+  "Group of Friends": 4,
+};
+
 export default function Home() {
   const [days, setDays] = useState<number>(3);
   const [pace, setPace] = useState<string>("Balanced");
   const [travelers, setTravelers] = useState<string>("Couple / 2 Adults");
+  const [travelDate, setTravelDate] = useState<string>("");
+  const [tourData, setTourData] = useState<Record<string, ViatorTour[]>>({});
+  const [toursStatus, setToursStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const fetchKey = useRef<string | null>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([
     "Historical Palaces",
     "Museums",
@@ -45,6 +58,8 @@ export default function Home() {
     schema: ItinerarySchema,
   });
 
+  const adults = ADULTS_BY_TRAVELERS[travelers] ?? 2;
+
   const toggleInterest = (interest: string) => {
     setSelectedInterests((prev) =>
       prev.includes(interest)
@@ -53,8 +68,52 @@ export default function Home() {
     );
   };
 
+  // Live Viator tours for every bookable attraction, fetched once the itinerary is complete.
+  // Re-runs if the travel date / party size changes so prices & availability stay current.
+  useEffect(() => {
+    if (isLoading || !itinerary?.days) return;
+
+    const terms = Array.from(
+      new Set(
+        itinerary.days
+          .flatMap((d) => d?.schedule ?? [])
+          .map((s) => s?.tourSearchTerm?.trim())
+          .filter((t): t is string => Boolean(t))
+      )
+    );
+    if (terms.length === 0) return;
+
+    const key = JSON.stringify([terms, travelDate, adults]);
+    if (fetchKey.current === key) return;
+    fetchKey.current = key;
+    setToursStatus("loading");
+
+    fetch("/api/tours", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queries: terms, travelDate: travelDate || undefined, adults }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<ToursApiResponse>;
+      })
+      .then((data) => {
+        if (fetchKey.current !== key) return; // a newer request superseded this one
+        setTourData(data.results ?? {});
+        setToursStatus(
+          !data.configured || data.failedLookups === terms.length ? "error" : "done"
+        );
+      })
+      .catch(() => {
+        if (fetchKey.current === key) setToursStatus("error");
+      });
+  }, [isLoading, itinerary, travelDate, adults]);
+
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
+    fetchKey.current = null;
+    setTourData({});
+    setToursStatus("idle");
     submit({
       days,
       pace,
@@ -84,7 +143,7 @@ export default function Home() {
           onSubmit={handleGenerate}
           className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Days Counter */}
             <div className="space-y-2">
               <label
@@ -146,6 +205,24 @@ export default function Home() {
                 <option value="Family with Kids">Family with Kids</option>
                 <option value="Group of Friends">Group of Friends</option>
               </select>
+            </div>
+
+            {/* Travel Date (optional) */}
+            <div className="space-y-2">
+              <label
+                htmlFor="travelDate"
+                className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
+              >
+                <Ticket className="w-4 h-4 text-amber-400" /> Travel Date (optional)
+              </label>
+              <input
+                id="travelDate"
+                type="date"
+                value={travelDate}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setTravelDate(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none [color-scheme:dark]"
+              />
             </div>
           </div>
 
@@ -219,6 +296,20 @@ export default function Home() {
           </div>
         )}
 
+        {!isLoading && toursStatus === "error" && (
+          <div className="bg-amber-950/40 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>Live tour prices are temporarily unavailable. Your itinerary is still ready to use.</span>
+          </div>
+        )}
+
+        {!isLoading && toursStatus === "done" && (
+          <p className="text-xs text-slate-500 text-center">
+            Tour prices and availability are fetched live from Viator. We may earn a commission if you book,
+            at no extra cost to you.
+          </p>
+        )}
+
         {/* Results Container */}
         {itinerary && (
           <div className="space-y-8 animate-fade-in">
@@ -282,32 +373,13 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* Affiliate Live Tour Recommendation */}
-                      {item?.liveTourRecommendation && (
-                        <div className="bg-slate-950 border border-purple-500/20 rounded-xl p-4 space-y-2 mt-2">
-                          <div className="flex justify-between items-center text-xs text-purple-400 font-semibold uppercase tracking-wider">
-                            <span>
-                              Recommended Guided Access ({item.liveTourRecommendation.provider})
-                            </span>
-                            {item.liveTourRecommendation.livePriceGBP !== undefined && (
-                              <span>From £{item.liveTourRecommendation.livePriceGBP}</span>
-                            )}
-                          </div>
-                          <p className="text-sm font-semibold text-slate-200">
-                            {item.liveTourRecommendation.title}
-                          </p>
-                          {/* Only link once streaming finishes, so a half-streamed URL can't be clicked */}
-                          {!isLoading && item.liveTourRecommendation.bookingUrl && (
-                            <a
-                              href={item.liveTourRecommendation.bookingUrl}
-                              target="_blank"
-                              rel="noopener noreferrer sponsored"
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 pt-1"
-                            >
-                              Check Live Availability & Rates <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                        </div>
+                      {/* Live tours from Viator (looked up after the itinerary finishes streaming) */}
+                      {!isLoading && item?.tourSearchTerm && toursStatus !== "idle" && (
+                        <TourOptions
+                          tours={tourData[item.tourSearchTerm]}
+                          loading={toursStatus === "loading"}
+                          adults={adults}
+                        />
                       )}
                     </div>
                   ))}

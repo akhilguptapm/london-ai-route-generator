@@ -16,16 +16,12 @@ export const ItinerarySchema = z.object({
           description: z.string().describe("Short tip or historical context"),
           transitTip: z.string().describe("Tube/Bus route from previous stop"),
           isLondonPassIncluded: z.boolean(),
-          liveTourRecommendation: z
-            .object({
-              title: z.string(),
-              provider: z.enum(["Viator", "GetYourGuide"]),
-              livePriceGBP: z.number(),
-              rating: z.number(),
-              bookingUrl: z.string()
-            })
+          tourSearchTerm: z
+            .string()
             .nullable()
-            .describe("Live tour to recommend, or null if no live tour data matches")
+            .describe(
+              "Official attraction name to look up bookable tours/tickets for (e.g. 'Tower of London'). Null for dining, transit, parks and free sights with nothing to book."
+            )
         })
       )
     })
