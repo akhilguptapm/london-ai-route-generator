@@ -343,8 +343,8 @@ export default function Home() {
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-                  <div className="bg-sky-500 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">
-                    D{day?.dayNumber}
+                  <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap">
+                    Day {day?.dayNumber ?? dayIdx + 1}
                   </div>
                   <h3 className="text-xl font-bold text-white">{day?.theme}</h3>
                 </div>
