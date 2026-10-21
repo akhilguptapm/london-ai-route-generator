@@ -3,7 +3,7 @@ import { z } from "zod";
 export const ItinerarySchema = z.object({
   tripTitle: z.string().describe("Catchy title for the generated London itinerary"),
   summary: z.string().describe("Brief overview of the route strategy and pacing"),
-  estimatedPassSavings: z.string().describe("Estimated £ savings if using London Pass"),
+  estimatedPassSavings: z.string().describe("Estimated savings in US dollars (use the $ symbol, e.g. $95) if using London Pass"),
   days: z.array(
     z.object({
       dayNumber: z.number(),
@@ -21,6 +21,38 @@ export const ItinerarySchema = z.object({
             .nullable()
             .describe(
               "Official attraction name to look up bookable tours/tickets for (e.g. 'Tower of London'). Null for dining, transit, parks and free sights with nothing to book."
+            ),
+          fallback: z
+            .object({
+              photoTip: z
+                .string()
+                .describe(
+                  "One sentence: the best spot to see/photograph this attraction from outside, so the stop is still worthwhile without a ticket or tour."
+                ),
+              nearbyAlternative: z.object({
+                name: z.string().describe("A real sight within ~10 min walk that is free or easy to visit without booking"),
+                description: z.string().describe("One short sentence on why it is worth visiting"),
+                tourSearchTerm: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "Official name to look up bookable tours/tickets for if this alternative is ticketed (e.g. 'Houses of Parliament'). Null if it is free / nothing to book."
+                  )
+              }),
+              mealSuggestion: z
+                .object({
+                  name: z.string().describe("A real, well-regarded cafe/restaurant/pub/market within ~10 min walk"),
+                  mealType: z.enum(["breakfast", "coffee", "lunch", "dinner"]),
+                  description: z.string().describe("One short sentence: cuisine / what to order / price feel")
+                })
+                .nullable()
+                .describe(
+                  "Use 'lunch' if the time slot overlaps 12:00-14:30, 'dinner' if it overlaps 18:00-21:00, 'breakfast' before 10:00, otherwise 'coffee'. Null only if the slot is under 1 hour."
+                )
+            })
+            .nullable()
+            .describe(
+              "Plan B shown ONLY if no tours are bookable on the traveller's date. Provide for every item with a tourSearchTerm; null when tourSearchTerm is null."
             )
         })
       )

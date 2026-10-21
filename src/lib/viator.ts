@@ -20,7 +20,7 @@ function viatorHeaders(): Record<string, string> {
   return {
     "exp-api-key": process.env.VIATOR_API_KEY ?? "",
     Accept: "application/json;version=2.0",
-    "Accept-Language": "en-GB",
+    "Accept-Language": "en-US",
     "Content-Type": "application/json",
   };
 }
@@ -66,7 +66,7 @@ function mapProduct(p: any): ViatorTour | null {
   return {
     productCode: p.productCode,
     title: p.title,
-    fromPriceGBP: typeof p.pricing?.summary?.fromPrice === "number" ? p.pricing.summary.fromPrice : null,
+    fromPriceUSD: typeof p.pricing?.summary?.fromPrice === "number" ? p.pricing.summary.fromPrice : null,
     rating:
       typeof p.reviews?.combinedAverageRating === "number"
         ? Math.round(p.reviews.combinedAverageRating * 10) / 10
@@ -98,7 +98,7 @@ export async function searchViatorTours(query: string, limit = 3): Promise<Viato
       searchTerm: query,
       productFiltering: { destination: LONDON_DESTINATION_ID },
       searchTypes: [{ searchType: "PRODUCTS", pagination: { start: 1, count: limit } }],
-      currency: "GBP",
+      currency: "USD",
     }),
   });
 
@@ -133,7 +133,7 @@ export async function checkViatorAvailability(
       body: JSON.stringify({
         productCode,
         travelDate,
-        currency: "GBP",
+        currency: "USD",
         paxMix: [{ ageBand: "ADULT", numberOfTravelers: adults }],
       }),
     });
@@ -152,7 +152,7 @@ export async function checkViatorAvailability(
     return {
       status: "available",
       travelDate,
-      totalPriceGBP: prices.length ? Math.min(...prices) : undefined,
+      totalPriceUSD: prices.length ? Math.min(...prices) : undefined,
     };
   } catch {
     return { status: "unknown", travelDate };

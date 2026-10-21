@@ -2,7 +2,7 @@ import { ExternalLink, Star, Clock, ShieldCheck, Loader2 } from "lucide-react";
 import type { ViatorTour } from "@/lib/tour-types";
 
 function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -37,7 +37,7 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
             <span className="inline-flex items-center gap-1">
               <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
               {tour.rating.toFixed(1)}
-              {tour.reviewCount > 0 && <span>({tour.reviewCount.toLocaleString("en-GB")})</span>}
+              {tour.reviewCount > 0 && <span>({tour.reviewCount.toLocaleString("en-US")})</span>}
             </span>
           )}
           {tour.durationText && (
@@ -56,10 +56,10 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
           <div className="text-xs">
-            {a?.status === "available" && a.totalPriceGBP !== undefined ? (
+            {a?.status === "available" && a.totalPriceUSD !== undefined ? (
               <>
                 <span className="font-bold text-slate-100 text-sm">
-                  £{a.totalPriceGBP.toFixed(2)}
+                  ${a.totalPriceUSD.toFixed(2)}
                 </span>{" "}
                 <span className="text-slate-400">
                   total for {adults} {adults === 1 ? "adult" : "adults"}
@@ -72,11 +72,11 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
               <span className="text-red-400 font-semibold">
                 Not available on {formatDate(a!.travelDate)}
               </span>
-            ) : tour.fromPriceGBP !== null ? (
+            ) : tour.fromPriceUSD !== null ? (
               <>
                 <span className="text-slate-400">From </span>
                 <span className="font-bold text-slate-100 text-sm">
-                  £{tour.fromPriceGBP.toFixed(2)}
+                  ${tour.fromPriceUSD.toFixed(2)}
                 </span>
                 <span className="text-slate-400"> per person</span>
                 {a?.status === "unknown" && (
@@ -92,7 +92,8 @@ function TourCard({ tour, adults }: { tour: ViatorTour; adults: number }) {
             rel="noopener noreferrer sponsored"
             className="inline-flex items-center gap-1.5 py-1.5 text-xs font-bold text-sky-400 hover:text-sky-300"
           >
-            View on Viator <ExternalLink className="w-3 h-3" />
+            {unavailable ? "Check Other Dates" : "Book & Save Now"}{" "}
+            <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useObject } from "@ai-sdk/react";
 import { ItinerarySchema } from "@/lib/schema";
 import { TourOptions } from "@/components/TourOptions";
+import { TourFallback, hasNoBookableTours } from "@/components/TourFallback";
+import { getGoCityLondonPassLink } from "@/lib/affiliates";
+import { toUSDText } from "@/lib/london-pass";
 import type { ToursApiResponse, ViatorTour } from "@/lib/tour-types";
 import {
   Compass,
@@ -14,6 +17,7 @@ import {
   Calendar,
   Users,
   AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 
 const AVAILABLE_INTERESTS = [
@@ -46,6 +50,8 @@ export default function Home() {
   const [tourData, setTourData] = useState<Record<string, ViatorTour[]>>({});
   const [toursStatus, setToursStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const fetchKey = useRef<string | null>(null);
+  const [altTourData, setAltTourData] = useState<Record<string, ViatorTour[]>>({});
+  const altFetchKey = useRef<string | null>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([
     "Historical Palaces",
     "Museums",
@@ -91,6 +97,8 @@ export default function Home() {
     const key = JSON.stringify([terms, travelDate, adults]);
     if (fetchKey.current === key) return;
     fetchKey.current = key;
+    altFetchKey.current = null; // date / party changed, so nearby-alternative tours are stale too
+    setAltTourData({});
     setToursStatus("loading");
 
     fetch("/api/tours", {
@@ -114,9 +122,50 @@ export default function Home() {
       });
   }, [isLoading, itinerary, travelDate, adults]);
 
+  // For stops with no bookable tours, the "nearby alternative" may itself be a ticketed sight
+  // (e.g. Houses of Parliament). Look those up so the suggestion can link straight to booking.
+  useEffect(() => {
+    if (isLoading || toursStatus !== "done" || !itinerary?.days) return;
+
+    const terms = Array.from(
+      new Set(
+        itinerary.days
+          .flatMap((d) => d?.schedule ?? [])
+          .filter((s) => s?.tourSearchTerm && hasNoBookableTours(tourData[s.tourSearchTerm.trim()]))
+          .map((s) => s?.fallback?.nearbyAlternative?.tourSearchTerm?.trim())
+          .filter((t): t is string => Boolean(t))
+          .filter((t) => !(t in tourData) && !(t in altTourData))
+      )
+    );
+    if (terms.length === 0) return;
+
+    const key = JSON.stringify([terms, travelDate, adults]);
+    if (altFetchKey.current === key) return;
+    altFetchKey.current = key;
+
+    fetch("/api/tours", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queries: terms, travelDate: travelDate || undefined, adults }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<ToursApiResponse>;
+      })
+      .then((data) => {
+        if (altFetchKey.current !== key) return; // superseded by a new date / itinerary
+        setAltTourData((prev) => ({ ...prev, ...(data.results ?? {}) }));
+      })
+      .catch(() => {
+        // Non-critical: the suggestion still shows its Maps link without a booking button.
+      });
+  }, [isLoading, toursStatus, itinerary, tourData, altTourData, travelDate, adults]);
+
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
     fetchKey.current = null;
+    altFetchKey.current = null;
+    setAltTourData({});
     setTourData({});
     setToursStatus("idle");
     submit({
@@ -325,15 +374,36 @@ export default function Home() {
                   <h2 className="text-xl sm:text-2xl font-bold text-sky-400 break-words">{itinerary.tripTitle}</h2>
                   <p className="text-slate-300 text-sm mt-1">{itinerary.summary}</p>
                 </div>
-                {itinerary.estimatedPassSavings && (
-                  <div className="w-full sm:w-auto bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-center">
-                    <span className="text-xs block uppercase font-bold text-emerald-500">
-                      London Pass Savings
-                    </span>
-                    <span className="text-lg font-extrabold">{itinerary.estimatedPassSavings}</span>
-                  </div>
-                )}
               </div>
+
+              {/* Interactive London Pass Savings Banner */}
+              {itinerary.estimatedPassSavings && (
+                <a
+                  href={getGoCityLondonPassLink()}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="inline-flex flex-wrap items-center justify-between gap-3 w-full p-4 mt-4 bg-emerald-950/60 border border-emerald-500/40 rounded-xl hover:bg-emerald-900/60 transition-all group cursor-pointer shadow-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xl font-bold shrink-0">
+                      $
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
+                        Exclusive Pass Savings
+                      </div>
+                      <div className="text-base sm:text-lg font-bold text-white">
+                        Unlock {toUSDText(itinerary.estimatedPassSavings)} Sightseeing Pass Savings — Get Yours Today
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-lg text-sm transition-all group-hover:translate-x-1">
+                    Book &amp; Save Now
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                </a>
+              )}
             </div>
 
             {/* Days Loop */}
@@ -361,9 +431,15 @@ export default function Home() {
                           {item?.timeSlot}
                         </span>
                         {item?.isLondonPassIncluded && (
-                          <span className="text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-md flex items-center gap-1">
-                            <Ticket className="w-3 h-3" /> Included with London Pass
-                          </span>
+                          <a
+                            href={getGoCityLondonPassLink()}
+                            target="_blank"
+                            rel="noopener noreferrer sponsored"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-400 rounded-full text-xs font-semibold transition-all hover:bg-emerald-500/20"
+                          >
+                            <span>✓ Included with London Pass</span>
+                            <span className="font-extrabold underline underline-offset-2">Book Pass</span>
+                          </a>
                         )}
                       </div>
 
@@ -386,6 +462,27 @@ export default function Home() {
                           adults={adults}
                         />
                       )}
+
+                      {/* Alternate route suggestion when nothing can be booked for the selected date */}
+                      {!isLoading &&
+                        item?.tourSearchTerm &&
+                        item.fallback &&
+                        toursStatus === "done" &&
+                        hasNoBookableTours(tourData[item.tourSearchTerm]) && (
+                          <TourFallback
+                            attractionName={item.attractionName ?? item.tourSearchTerm}
+                            timeSlot={item.timeSlot}
+                            fallback={item.fallback}
+                            tours={tourData[item.tourSearchTerm]}
+                            alternativeTours={
+                              item.fallback.nearbyAlternative?.tourSearchTerm
+                                ? tourData[item.fallback.nearbyAlternative.tourSearchTerm.trim()] ??
+                                  altTourData[item.fallback.nearbyAlternative.tourSearchTerm.trim()]
+                                : undefined
+                            }
+                            isLondonPassIncluded={Boolean(item.isLondonPassIncluded)}
+                          />
+                        )}
                     </div>
                   ))}
                 </div>

@@ -5,15 +5,15 @@ export type AvailabilityStatus = "available" | "unavailable" | "unknown";
 export interface TourAvailability {
   status: AvailabilityStatus;
   travelDate: string; // YYYY-MM-DD
-  /** Live total (GBP) for the requested travellers, when available on that date */
-  totalPriceGBP?: number;
+  /** Live total (USD) for the requested travellers, when available on that date */
+  totalPriceUSD?: number;
 }
 
 export interface ViatorTour {
   productCode: string;
   title: string;
-  /** Live "from" price per person in GBP */
-  fromPriceGBP: number | null;
+  /** Live "from" price per person in USD */
+  fromPriceUSD: number | null;
   rating: number | null;
   reviewCount: number;
   durationText: string | null;
