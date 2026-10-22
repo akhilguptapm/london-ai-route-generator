@@ -1,18 +1,51 @@
 import { openai } from "@ai-sdk/openai";
-import { generateText, Output } from "ai";
+import { generateText, streamText, Output } from "ai";
 import { DaySchema, OutlineSchema } from "@/lib/schema";
 import { GOCITY_ATTRACTIONS } from "@/lib/gocity-attractions";
+import { DayChannel } from "@/lib/day-channel";
+import { buildCacheKey, getCachedItinerary, setCachedItinerary } from "@/lib/itinerary-cache";
+import { checkGenerateRateLimit, getClientId } from "@/lib/rate-limit";
+import { normalizeTripRequest } from "@/lib/trip-options";
 
 // Each day is planned in its own parallel model call, so total time no longer grows with trip length.
 // maxDuration is a safety ceiling only.
 export const maxDuration = 300;
 
-const MODEL = openai("gpt-4o");
+const MODEL_ID = "gpt-4o";
+const MODEL = openai(MODEL_ID);
 const DAY_ATTEMPTS = 2;
+
+const STREAM_HEADERS = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" };
 
 export async function POST(req: Request) {
   try {
-    const { pace, days, interests, travelers, startLocation } = await req.json();
+    // Normalise first: it keeps junk out of the prompt and makes equivalent searches share one cache key.
+    const trip = normalizeTripRequest(await req.json().catch(() => null));
+    const { pace, days, interests, travelers, startLocation } = trip;
+
+    // Repeat searches are served from cache: instant, and no tokens spent.
+    const cacheKey = buildCacheKey(trip, MODEL_ID);
+    const cached = await getCachedItinerary(cacheKey);
+    if (cached) {
+      return new Response(cached, { headers: { ...STREAM_HEADERS, "X-Cache": "HIT" } });
+    }
+
+    // Only uncached generations cost tokens, so only they are rate limited (per client IP).
+    const limit = await checkGenerateRateLimit(getClientId(req));
+    if (!limit.allowed) {
+      const minutes = Math.ceil(limit.retryAfterSeconds / 60);
+      return new Response(
+        JSON.stringify({
+          error: "rate_limited",
+          message: `You've planned a lot of trips in a short time. Please try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+          retryAfterSeconds: limit.retryAfterSeconds,
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": String(limit.retryAfterSeconds) },
+        }
+      );
+    }
 
     const systemPrompt = `
       You are an expert London Route Planner, Transit Specialist, and Affiliate Optimization Engine.
@@ -42,15 +75,20 @@ export async function POST(req: Request) {
     const tripBrief = `
       Travelers: ${travelers}.
       Pace: ${pace}.
-      Interests: ${Array.isArray(interests) && interests.length ? interests.join(", ") : "General Sightseeing"}.
-      Base Location / Hotel Area: ${startLocation || "Central London"}.
+      Interests: ${interests.length ? interests.join(", ") : "General Sightseeing"}.
+      Base Location / Hotel Area: ${startLocation}.
     `;
 
-    const totalDays = Math.max(1, Math.min(Number(days) || 1, 7));
+    const totalDays = days;
+
+    // Stop all in-flight model calls if the client disconnects (e.g. the user hits "Stop").
+    const abort = new AbortController();
+    req.signal.addEventListener("abort", () => abort.abort());
 
     // Step 1 (fast): a title, summary and a distinct focus area per day, so parallel day plans don't overlap.
     const { output: outline } = await generateText({
       model: MODEL,
+      abortSignal: abort.signal,
       output: Output.object({ schema: OutlineSchema }),
       system: systemPrompt,
       prompt: `
@@ -62,8 +100,9 @@ export async function POST(req: Request) {
 
     const outlineDays = Array.from({ length: totalDays }, (_, i) => outline.days[i]);
 
-    // Step 2: plan every day in parallel (retrying once on failure).
-    const planDay = async (index: number) => {
+    // Step 2: plan every day in parallel. Each day streams its JSON text token-by-token into a DayChannel.
+    // A failed attempt is retried once, invisibly, as long as none of that day's text has reached the client.
+    const planDay = (index: number): DayChannel => {
       const dayNumber = index + 1;
       const others = outlineDays
         .filter((_, i) => i !== index)
@@ -71,60 +110,96 @@ export async function POST(req: Request) {
         .filter(Boolean)
         .join("\n");
       const mine = outlineDays[index];
+      const channel = new DayChannel();
 
-      for (let attempt = 1; attempt <= DAY_ATTEMPTS; attempt++) {
-        try {
-          const { output: day } = await generateText({
-            model: MODEL,
-            output: Output.object({ schema: DaySchema }),
-            system: systemPrompt,
-            prompt: `
+      void (async () => {
+        for (let attempt = 1; attempt <= DAY_ATTEMPTS; attempt++) {
+          try {
+            const result = streamText({
+              model: MODEL,
+              abortSignal: abort.signal,
+              output: Output.object({ schema: DaySchema }),
+              system: systemPrompt,
+              prompt: `
               Plan ONLY Day ${dayNumber} of a ${totalDays}-day London itinerary (set dayNumber to ${dayNumber}).
               ${mine ? `This day's plan: ${mine.theme} - based around ${mine.area}, featuring ${mine.headlineSights.join(", ")}.` : ""}
               Other days already cover the following, so do NOT repeat these attractions:
               ${others || "(none)"}
               ${tripBrief}
             `,
-          });
-          return { ...day, dayNumber };
-        } catch (err) {
-          console.error(`Day ${dayNumber} generation failed (attempt ${attempt}):`, err);
+              // streamText reports errors through this callback (they never throw from the text stream).
+              onError: ({ error }) => console.error(`Day ${dayNumber} stream error (attempt ${attempt}):`, error),
+            });
+
+            for await (const chunk of result.textStream) channel.push(chunk);
+            await result.output; // throws if the stream died early or the JSON doesn't match DaySchema
+            channel.finish();
+            return;
+          } catch (err) {
+            console.error(`Day ${dayNumber} generation failed (attempt ${attempt}):`, err);
+            if (abort.signal.aborted || channel.committed) break; // can't retry once bytes are with the client
+            channel.reset();
+          }
         }
-      }
-      return null;
+        channel.fail();
+      })();
+
+      return channel;
     };
 
-    const dayPromises = Array.from({ length: totalDays }, (_, i) => planDay(i));
+    const channels = Array.from({ length: totalDays }, (_, i) => planDay(i));
 
-    // Stream the same JSON shape the client already parses (tripTitle, summary, days[]),
-    // emitting each day as soon as it - and every day before it - is ready.
+    // Stream the same JSON shape the client already parses (tripTitle, summary, days[]).
+    // Days go out in order: the current day is forwarded live, chunk-by-chunk, while later days keep
+    // generating in parallel and flush the moment their turn comes.
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        let full = "";
+        const emit = (text: string) => {
+          full += text;
+          controller.enqueue(encoder.encode(text));
+        };
+
         try {
-          controller.enqueue(
-            encoder.encode(
-              `{"tripTitle":${JSON.stringify(outline.tripTitle)},"summary":${JSON.stringify(outline.summary)},"days":[`
-            )
-          );
+          emit(`{"tripTitle":${JSON.stringify(outline.tripTitle)},"summary":${JSON.stringify(outline.summary)},"days":[`);
+
           let emitted = 0;
-          for (const promise of dayPromises) {
-            const day = await promise;
-            if (!day) continue;
-            controller.enqueue(encoder.encode(`${emitted ? "," : ""}${JSON.stringify(day)}`));
-            emitted++;
+          for (const channel of channels) {
+            let started = false;
+            for await (const chunk of channel) {
+              if (!started) {
+                started = true;
+                if (emitted) emit(",");
+              }
+              emit(chunk);
+            }
+            if (started) emitted++;
+            // The day broke after part of it was already sent: the JSON can't be repaired, so end with an error.
+            if (channel.failed && started) throw new Error("A day failed after it had started streaming");
           }
-          controller.enqueue(encoder.encode("]}"));
+          emit("]}");
+
+          // Only cache complete trips - never a partial one that would keep being served.
+          if (emitted === totalDays && !abort.signal.aborted) {
+            await setCachedItinerary(cacheKey, full);
+          }
           controller.close();
         } catch (err) {
-          controller.error(err);
+          console.error("Itinerary stream failed:", err);
+          try {
+            controller.error(err);
+          } catch {
+            // already closed / cancelled by the client
+          }
         }
+      },
+      cancel() {
+        abort.abort(); // client went away: stop spending tokens
       },
     });
 
-    return new Response(stream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
-    });
+    return new Response(stream, { headers: { ...STREAM_HEADERS, "X-Cache": "MISS" } });
   } catch (error) {
     console.error("Error generating itinerary:", error);
     return new Response(JSON.stringify({ error: "Failed to generate itinerary" }), {

@@ -11,6 +11,39 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-cab-drive: cab-drive 4.5s linear infinite;
+  --animate-road-scroll: road-scroll 0.8s linear infinite;
+  --animate-cab-bob: cab-bob 0.5s ease-in-out infinite;
+
+  /* The cab drives left-to-right along the progress road, then loops. */
+  @keyframes cab-drive {
+    from {
+      left: -2.5rem;
+    }
+    to {
+      left: 100%;
+    }
+  }
+
+  /* Dashed road markings sliding under the cab. */
+  @keyframes road-scroll {
+    from {
+      background-position-x: 0;
+    }
+    to {
+      background-position-x: -24px;
+    }
+  }
+
+  @keyframes cab-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-1.5px);
+    }
+  }
 
   @keyframes fade-in {
     from {

@@ -6,11 +6,14 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "pregenerate": "node scripts/pregenerate.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.98",
     "@ai-sdk/react": "^4.0.150",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "ai": "^7.0.146",
     "clsx": "^2.1.1",
     "lucide-react": "^1.60.0",

@@ -5,7 +5,15 @@ import { useObject } from "@ai-sdk/react";
 import { ItinerarySchema } from "@/lib/schema";
 import { TourOptions } from "@/components/TourOptions";
 import { TourFallback, hasNoBookableTours } from "@/components/TourFallback";
+import { GenerationProgress } from "@/components/GenerationProgress";
+import { DaySkeleton } from "@/components/DaySkeleton";
 import { getGoCityLondonPassLink } from "@/lib/affiliates";
+import {
+  AVAILABLE_INTERESTS,
+  DEFAULT_INTERESTS,
+  PACES,
+  TRAVELER_TYPES,
+} from "@/lib/trip-options";
 import {
   calculatePassSavings,
   formatSavingsRange,
@@ -24,16 +32,8 @@ import {
   AlertTriangle,
   ArrowRight,
   ChevronDown,
+  Zap,
 } from "lucide-react";
-
-const AVAILABLE_INTERESTS = [
-  "Historical Palaces",
-  "Museums",
-  "Family Friendly",
-  "Food & Markets",
-  "Hidden Gems",
-  "Parks & Views",
-];
 
 // Party size used for live Viator price / availability checks (adult pricing).
 const ADULTS_BY_TRAVELERS: Record<string, number> = {
@@ -62,11 +62,9 @@ export default function Home() {
   const fetchKey = useRef<string | null>(null);
   const [altTourData, setAltTourData] = useState<Record<string, ViatorTour[]>>({});
   const altFetchKey = useRef<string | null>(null);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    "Historical Palaces",
-    "Museums",
-    "Food & Markets",
-  ]);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(DEFAULT_INTERESTS);
+  // True when the last itinerary was served from the server-side cache (X-Cache: HIT).
+  const [servedFromCache, setServedFromCache] = useState(false);
 
   const {
     object: itinerary,
@@ -77,12 +75,31 @@ export default function Home() {
   } = useObject({
     api: "/api/generate",
     schema: ItinerarySchema,
+    // Peek at the response headers to learn whether this trip came from the cache.
+    fetch: async (input, init) => {
+      const res = await fetch(input, init);
+      setServedFromCache(res.headers.get("X-Cache") === "HIT");
+      return res;
+    },
   });
 
   const adults = ADULTS_BY_TRAVELERS[travelers] ?? 2;
 
+  // A 429 from the API arrives as the error message (the JSON response body); show its friendly text.
+  const rateLimitMessage = useMemo(() => {
+    if (!error) return null;
+    try {
+      const body = JSON.parse(error.message);
+      return body?.error === "rate_limited" && typeof body.message === "string" ? body.message : null;
+    } catch {
+      return null;
+    }
+  }, [error]);
+
   // Days that actually came back with a theme and stops (the stream can end with an empty trailing day).
   const plannedDays = (itinerary?.days ?? []).filter((d) => d?.theme?.trim() && d?.schedule?.length).length;
+  // Days that have begun streaming in (even if still being written) - drives the progress indicator.
+  const startedDays = (itinerary?.days ?? []).filter((d) => d?.theme?.trim()).length;
 
   // Pass savings are calculated (not AI-written): Go City's published USD gate prices, cross-checked against
   // live Viator entry-ticket prices where Viator sells the same attraction. Shown as an estimated range.
@@ -199,6 +216,7 @@ export default function Home() {
     setAltTourData({});
     setTourData({});
     setOpenDays({});
+    setServedFromCache(false);
     setRequestedDays(days);
     setToursStatus("idle");
     submit({
@@ -267,9 +285,11 @@ export default function Home() {
                 onChange={(e) => setPace(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
-                <option value="Relaxed">Relaxed (2 sights/day)</option>
-                <option value="Balanced">Balanced (3 sights/day)</option>
-                <option value="Fast-Paced">Fast-Paced (4+ sights/day)</option>
+                {PACES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -287,10 +307,11 @@ export default function Home() {
                 onChange={(e) => setTravelers(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               >
-                <option value="Solo Traveler">Solo Traveler</option>
-                <option value="Couple / 2 Adults">Couple / 2 Adults</option>
-                <option value="Family with Kids">Family with Kids</option>
-                <option value="Group of Friends">Group of Friends</option>
+                {TRAVELER_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -370,6 +391,24 @@ export default function Home() {
           </div>
         </form>
 
+        {/* Streaming progress: shows from the moment "Generate" is pressed until the last day lands */}
+        {isLoading && (
+          <GenerationProgress
+            totalDays={requestedDays ?? days}
+            startedDays={startedDays}
+            hasStarted={Boolean(itinerary?.tripTitle)}
+          />
+        )}
+
+        {/* Skeletons for the very first seconds, before any part of the trip has streamed in */}
+        {isLoading && !itinerary && (
+          <div className="space-y-8">
+            {Array.from({ length: requestedDays ?? days }, (_, i) => (
+              <DaySkeleton key={i} dayNumber={i + 1} />
+            ))}
+          </div>
+        )}
+
         {/* Error State */}
         {error && (
           <div
@@ -378,7 +417,7 @@ export default function Home() {
           >
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>
-              We couldn&apos;t generate your itinerary. Please try again in a moment.
+              {rateLimitMessage ?? "We couldn't generate your itinerary. Please try again in a moment."}
             </span>
           </div>
         )}
@@ -409,6 +448,11 @@ export default function Home() {
                 <div className="min-w-0 flex-1 basis-64">
                   <h2 className="text-xl sm:text-2xl font-bold text-sky-700 break-words">{itinerary.tripTitle}</h2>
                   <p className="text-slate-700 text-sm mt-1">{itinerary.summary}</p>
+                  {servedFromCache && !isLoading && (
+                    <p className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                      <Zap className="w-3.5 h-3.5" /> Loaded instantly from our popular routes
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -492,19 +536,7 @@ export default function Home() {
               const hasContent = Boolean(day?.theme?.trim()) && (day?.schedule?.length ?? 0) > 0;
               if (!hasContent) {
                 if (!isLoading) return null;
-                return (
-                  <div
-                    key={dayIdx}
-                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 flex items-center gap-3"
-                  >
-                    <div className="bg-sky-500 text-white h-8 px-3 rounded-lg flex items-center justify-center font-bold text-sm whitespace-nowrap shrink-0">
-                      Day {day?.dayNumber ?? dayIdx + 1}
-                    </div>
-                    <span className="text-sm text-slate-600 flex items-center gap-2">
-                      <Compass className="w-4 h-4 animate-spin" /> Planning this day…
-                    </span>
-                  </div>
-                );
+                return <DaySkeleton key={dayIdx} dayNumber={day?.dayNumber ?? dayIdx + 1} />;
               }
 
               return (
@@ -611,6 +643,18 @@ export default function Home() {
               </div>
               );
             })}
+
+            {/* Days the stream hasn't reached yet */}
+            {isLoading &&
+              Array.from(
+                { length: Math.max((requestedDays ?? days) - (itinerary.days?.length ?? 0), 0) },
+                (_, i) => (
+                  <DaySkeleton
+                    key={`pending-${i}`}
+                    dayNumber={(itinerary.days?.length ?? 0) + i + 1}
+                  />
+                )
+              )}
           </div>
         )}
       </div>

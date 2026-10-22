@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Itinerary cache (Upstash Redis)
+
+Generated itineraries are cached (24 hours) so repeat searches load instantly and cost no OpenAI tokens.
+The cache key is built from the normalised request (days, pace, travelers, interests, start location) plus the model
+and `CACHE_VERSION` in `src/lib/itinerary-cache.ts` - **bump `CACHE_VERSION` whenever you change the prompts or schema**.
+
+- **Production:** add Upstash Redis from the Vercel Marketplace (`vercel integration add upstash`), then
+  `vercel env pull .env.local`. It injects `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or the `KV_REST_API_*` equivalents).
+- **Local dev:** with no Redis env vars the app falls back to an in-memory cache, so nothing needs configuring.
+- Responses carry an `X-Cache: HIT | MISS` header.
+
+Warm the cache with the most common searches (edit `PRESETS` in `scripts/pregenerate.mjs`):
+
+```bash
+npm run pregenerate                                # local dev server
+npm run pregenerate -- https://your-app.vercel.app # production
+```
+
+## Rate limiting
+
+`/api/generate` limits **uncached** generations to 6 per 10 minutes per client IP (sliding window, `@upstash/ratelimit`,
+configured in `src/lib/rate-limit.ts`). Cache hits are never limited since they cost nothing. Over the limit the API returns
+`429` with a `Retry-After` header and the UI shows a friendly message. It uses the same Redis as the cache; with no Redis
+configured (local dev) limiting is skipped, and if Redis errors the request is allowed through.
