@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-export const ItinerarySchema = z.object({
-  tripTitle: z.string().describe("Catchy title for the generated London itinerary"),
-  summary: z.string().describe("Brief overview of the route strategy and pacing"),
-  days: z.array(
-    z.object({
+export const DaySchema = z.object({
       dayNumber: z.number(),
       theme: z.string().describe("Theme for the day, e.g., Historical Palaces & Westminster"),
       dayDescription: z
@@ -59,6 +55,25 @@ export const ItinerarySchema = z.object({
             )
         })
       )
+});
+
+export const ItinerarySchema = z.object({
+  tripTitle: z.string().describe("Catchy title for the generated London itinerary"),
+  summary: z.string().describe("Brief overview of the route strategy and pacing"),
+  days: z.array(DaySchema)
+});
+
+// Quick first pass: one title/summary plus a distinct focus for every day, so days can be planned in parallel
+// without repeating attractions.
+export const OutlineSchema = z.object({
+  tripTitle: z.string().describe("Catchy title for the generated London itinerary"),
+  summary: z.string().describe("Brief overview of the route strategy and pacing"),
+  days: z.array(
+    z.object({
+      dayNumber: z.number(),
+      theme: z.string().describe("Theme for the day, e.g., Historical Palaces & Westminster"),
+      area: z.string().describe("The London area/neighbourhood cluster this day is based in"),
+      headlineSights: z.array(z.string()).describe("The main sights/meals planned for this day (names only)")
     })
   )
 });

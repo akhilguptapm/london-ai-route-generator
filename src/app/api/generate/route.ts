@@ -1,10 +1,14 @@
 import { openai } from "@ai-sdk/openai";
-import { streamObject } from "ai";
-import { ItinerarySchema } from "@/lib/schema";
+import { generateText, Output } from "ai";
+import { DaySchema, OutlineSchema } from "@/lib/schema";
 import { GOCITY_ATTRACTIONS } from "@/lib/gocity-attractions";
 
-// Allow execution up to 60s for Vercel serverless function
-export const maxDuration = 60;
+// Each day is planned in its own parallel model call, so total time no longer grows with trip length.
+// maxDuration is a safety ceiling only.
+export const maxDuration = 300;
+
+const MODEL = openai("gpt-4o");
+const DAY_ATTEMPTS = 2;
 
 export async function POST(req: Request) {
   try {
@@ -35,21 +39,92 @@ export async function POST(req: Request) {
          visit that day (name the headline sights and the overall feel). No prices, no URLs.
     `;
 
-    const userPrompt = `
-      Plan a ${days}-day London itinerary for ${travelers} traveler(s).
+    const tripBrief = `
+      Travelers: ${travelers}.
       Pace: ${pace}.
       Interests: ${Array.isArray(interests) && interests.length ? interests.join(", ") : "General Sightseeing"}.
       Base Location / Hotel Area: ${startLocation || "Central London"}.
     `;
 
-    const result = streamObject({
-      model: openai("gpt-4o"),
-      schema: ItinerarySchema,
+    const totalDays = Math.max(1, Math.min(Number(days) || 1, 7));
+
+    // Step 1 (fast): a title, summary and a distinct focus area per day, so parallel day plans don't overlap.
+    const { output: outline } = await generateText({
+      model: MODEL,
+      output: Output.object({ schema: OutlineSchema }),
       system: systemPrompt,
-      prompt: userPrompt,
+      prompt: `
+        Outline a ${totalDays}-day London itinerary. Return exactly ${totalDays} days (dayNumber 1 to ${totalDays}).
+        Give each day a different geographic area and different headline sights - no attraction may appear on two days.
+        ${tripBrief}
+      `,
     });
 
-    return result.toTextStreamResponse();
+    const outlineDays = Array.from({ length: totalDays }, (_, i) => outline.days[i]);
+
+    // Step 2: plan every day in parallel (retrying once on failure).
+    const planDay = async (index: number) => {
+      const dayNumber = index + 1;
+      const others = outlineDays
+        .filter((_, i) => i !== index)
+        .map((d, i) => d && `Day ${d.dayNumber ?? i + 1}: ${d.theme} (${d.area}; ${d.headlineSights.join(", ")})`)
+        .filter(Boolean)
+        .join("\n");
+      const mine = outlineDays[index];
+
+      for (let attempt = 1; attempt <= DAY_ATTEMPTS; attempt++) {
+        try {
+          const { output: day } = await generateText({
+            model: MODEL,
+            output: Output.object({ schema: DaySchema }),
+            system: systemPrompt,
+            prompt: `
+              Plan ONLY Day ${dayNumber} of a ${totalDays}-day London itinerary (set dayNumber to ${dayNumber}).
+              ${mine ? `This day's plan: ${mine.theme} - based around ${mine.area}, featuring ${mine.headlineSights.join(", ")}.` : ""}
+              Other days already cover the following, so do NOT repeat these attractions:
+              ${others || "(none)"}
+              ${tripBrief}
+            `,
+          });
+          return { ...day, dayNumber };
+        } catch (err) {
+          console.error(`Day ${dayNumber} generation failed (attempt ${attempt}):`, err);
+        }
+      }
+      return null;
+    };
+
+    const dayPromises = Array.from({ length: totalDays }, (_, i) => planDay(i));
+
+    // Stream the same JSON shape the client already parses (tripTitle, summary, days[]),
+    // emitting each day as soon as it - and every day before it - is ready.
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `{"tripTitle":${JSON.stringify(outline.tripTitle)},"summary":${JSON.stringify(outline.summary)},"days":[`
+            )
+          );
+          let emitted = 0;
+          for (const promise of dayPromises) {
+            const day = await promise;
+            if (!day) continue;
+            controller.enqueue(encoder.encode(`${emitted ? "," : ""}${JSON.stringify(day)}`));
+            emitted++;
+          }
+          controller.enqueue(encoder.encode("]}"));
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    });
   } catch (error) {
     console.error("Error generating itinerary:", error);
     return new Response(JSON.stringify({ error: "Failed to generate itinerary" }), {
