@@ -124,7 +124,7 @@ export function TourOptions({
   return (
     <div className="bg-slate-50 border border-purple-200 rounded-xl p-3 sm:p-4 space-y-3 mt-2">
       <div className="text-xs text-purple-700 font-semibold uppercase tracking-wider">
-        Book tours &amp; tickets · live from Viator
+        Recommended Top Experiences &amp; Tours
       </div>
       <div className="space-y-2">
         {tours.map((tour) => (
