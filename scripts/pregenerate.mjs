@@ -41,7 +41,8 @@ for (const { name, ...trip } of presets) {
     let res;
     // The API rate-limits uncached generations per IP; when that happens, wait it out and retry.
     for (let attempt = 1; ; attempt++) {
-      res = await fetch(`${baseUrl}/api/generate`, {
+      // The app is served under basePath "/planner" (see next.config.ts).
+      res = await fetch(`${baseUrl}/planner/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trip),

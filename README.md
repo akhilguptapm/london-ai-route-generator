@@ -1,39 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# London AI Route Generator
 
-## Getting Started
+An AI-powered London itinerary planner for [London Tour Package](https://londontourpackage.com).
+Visitors choose how many days they have, their pace, who they are travelling with and what they are interested in.
+The app streams back a day-by-day route with tube transit tips, then adds live tour ticket prices and London Pass savings.
 
-First, run the development server:
+**Live:** <https://londontourpackage.com/planner>
+
+## Features
+
+- **AI itineraries, streamed live.** Each day is planned in parallel and appears as soon as it is ready.
+- **Live tour options.** Bookable tours and prices come from the Viator Partner API.
+- **London Pass savings.** Compares walk-up prices with Go City passes and shows the potential saving.
+- **Itinerary cache.** Repeat searches load instantly and cost no AI tokens (Upstash Redis, 24 hours).
+- **Rate limiting.** Protects the AI endpoint from abuse.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) 16 (App Router, Cache Components) with React 19 and TypeScript
+- [Vercel AI SDK](https://ai-sdk.dev) with OpenAI (`gpt-4o`) for itinerary generation
+- Tailwind CSS 4 and `lucide-react` icons
+- Upstash Redis for caching and rate limiting
+- Viator Partner API for tours and prices
+- Hosted on Vercel, served through Cloudflare
+
+## Getting started
+
+Requirements: Node.js 20 or later.
 
 ```bash
+npm install
+# create .env.local with the variables listed below (or run `vercel env pull .env.local`)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dev server runs on port 3001. Because the app uses a base path (see below), open
+<http://localhost:3001/planner>, not the bare `localhost:3001`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set these in `.env.local` for local development and in the Vercel project settings for production.
+Never commit real values.
 
-## Learn More
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | Yes | Itinerary generation. |
+| `VIATOR_API_KEY` | For live tours | Viator Partner API key. Without it, tour lookups are skipped. |
+| `VIATOR_API_BASE_URL` | No | Overrides the default `https://api.viator.com`. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | In production | Cache and rate limiting. The `KV_REST_API_URL` and `KV_REST_API_TOKEN` names also work. |
+| `NEXT_PUBLIC_GOCITY_AFFILIATE_LINK` | No | Overrides the default Go City affiliate link. |
 
-To learn more about Next.js, take a look at the following resources:
+Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, `npm run pregenerate`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Serving the app at `/planner`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The app lives at `londontourpackage.com/planner`, while the main site runs on WordPress. How it fits together:
 
-## Deploy on Vercel
+```
+Visitor -> Cloudflare (londontourpackage.com)
+             |-- /planner*  -> Cloudflare Worker -> Vercel app (london-ai-route-generator.vercel.app/planner)
+             `-- everything else -> WordPress (GoDaddy hosting)
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **`basePath: "/planner"`** is set in `next.config.ts`. Every page, asset and API route lives under `/planner`.
+- **Plain `fetch()` calls are not prefixed automatically.** `src/app/page.tsx` has a `BASE_PATH` constant that must
+  match `basePath` in `next.config.ts`. If you add a new client-side API call, build the URL with `BASE_PATH`.
+- **Vercel root redirect.** `next.config.ts` redirects `/` to `/planner`, so the bare `*.vercel.app` address still opens the app.
+- **Cloudflare Worker** (`london-ai-planner-proxy`, route `londontourpackage.com/planner*`) forwards `/planner` requests to
+  the Vercel app. It redirects look-alike paths such as `/plannerfoo` or `/Planner` to `/planner`, and rewrites any
+  Vercel redirect so visitors stay on `londontourpackage.com`.
+- **Cloudflare Redirect Rule** ("Planner typo redirects") sends common typos such as `/plannr`, `/planer`,
+  `/planner-tool`, `/route-planner` and `/itinerary` to `/planner` (302). Add paths there, and first check that none is a real WordPress page.
+- Do not add `londontourpackage.com` as a domain in the Vercel project. Cloudflare does the routing.
 
 ## Itinerary cache (Upstash Redis)
 
@@ -49,13 +86,35 @@ and `CACHE_VERSION` in `src/lib/itinerary-cache.ts` - **bump `CACHE_VERSION` whe
 Warm the cache with the most common searches (edit `PRESETS` in `scripts/pregenerate.mjs`):
 
 ```bash
-npm run pregenerate                                # local dev server
-npm run pregenerate -- https://your-app.vercel.app # production
+npm run pregenerate                                # local dev server (http://localhost:3001)
+npm run pregenerate -- https://your-app.vercel.app # production (the script adds /planner itself)
+npm run pregenerate -- --only "3 days"             # only presets whose name contains this text
 ```
 
 ## Rate limiting
 
-`/api/generate` limits **uncached** generations to 6 per 10 minutes per client IP (sliding window, `@upstash/ratelimit`,
+`/planner/api/generate` limits **uncached** generations to 6 per 10 minutes per client IP (sliding window, `@upstash/ratelimit`,
 configured in `src/lib/rate-limit.ts`). Cache hits are never limited since they cost nothing. Over the limit the API returns
 `429` with a `Retry-After` header and the UI shows a friendly message. It uses the same Redis as the cache; with no Redis
 configured (local dev) limiting is skipped, and if Redis errors the request is allowed through.
+
+## Keeping data up to date
+
+- **Go City pass prices** are stored in `src/lib/gocity-attractions.ts` (last verified 21 Oct 2026). Go City changes prices
+  and the attraction line-up, so re-check them periodically and update `GOCITY_DATA_VERIFIED`.
+- **Prompts or schema changes** need a `CACHE_VERSION` bump (see above), otherwise visitors may get old cached itineraries.
+
+## Deploying
+
+Pushing to `main` deploys to Vercel automatically. Check the result at <https://londontourpackage.com/planner>.
+Cloudflare Worker and redirect rule changes are made in the Cloudflare dashboard and are not part of this repository.
+
+## Project structure
+
+```
+src/app/            Pages, layout and API routes (/api/generate, /api/tours)
+src/components/     UI components (tour options, progress, skeletons)
+src/lib/            AI schema, cache, rate limit, Viator client, pass savings, affiliate links
+scripts/            pregenerate.mjs (cache warm-up)
+next.config.ts      basePath, root redirect, Tailwind and Turbopack setup
+```
