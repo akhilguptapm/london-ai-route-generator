@@ -5,6 +5,22 @@ const nextConfig: NextConfig = {
   basePath: "/planner",
   cacheComponents: true,
   partialPrefetching: true,
+  poweredByHeader: false,
+  // Basic hardening headers. (No Content-Security-Policy yet: Next.js inline scripts need a nonce setup first.)
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Same-origin framing only (the planner and WordPress share londontourpackage.com).
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+        ],
+      },
+    ];
+  },
   // The bare *.vercel.app root has no page now that the app lives under /planner.
   async redirects() {
     return [

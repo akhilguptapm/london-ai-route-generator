@@ -48,6 +48,7 @@ Never commit real values.
 | `VIATOR_API_BASE_URL` | No | Overrides the default `https://api.viator.com`. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | In production | Cache and rate limiting. The `KV_REST_API_URL` and `KV_REST_API_TOKEN` names also work. |
 | `NEXT_PUBLIC_GOCITY_AFFILIATE_LINK` | No | Overrides the default Go City affiliate link. |
+| `PLANNER_PROXY_SECRET` | In production | Shared secret with the Cloudflare Worker (see Security). Leave unset locally. |
 
 Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, `npm run pregenerate`.
 
@@ -71,6 +72,22 @@ Visitor -> Cloudflare (londontourpackage.com)
 - **Cloudflare Redirect Rule** ("Planner typo redirects") sends common typos such as `/plannr`, `/planer`,
   `/planner-tool`, `/route-planner` and `/itinerary` to `/planner` (302). Add paths there, and first check that none is a real WordPress page.
 - Do not add `londontourpackage.com` as a domain in the Vercel project. Cloudflare does the routing.
+
+## Security
+
+- **Only the Worker may call the APIs.** The Worker adds `x-planner-proxy-secret` (a shared secret) and
+  `x-planner-client-ip` (the visitor's real IP) to every request it forwards. When `PLANNER_PROXY_SECRET` is set
+  in Vercel, `/planner/api/generate` and `/planner/api/tours` return `403` for any request without the correct
+  secret, so calling the `*.vercel.app` address directly cannot skip Cloudflare or burn OpenAI credits.
+  The logic is in `src/lib/proxy-guard.ts`. With the variable unset (local dev) nothing is enforced.
+- **Rate limiting uses the real visitor IP.** Behind Cloudflare, Vercel only sees Cloudflare's IPs, so
+  `getClientId` in `src/lib/rate-limit.ts` reads `x-planner-client-ip`, but only when the secret is valid.
+- **Rotating the secret:** generate a new value (`openssl rand -hex 32`), update the Cloudflare Worker secret first
+  and then the Vercel env var (then redeploy). Briefly, requests can be rejected between the two steps.
+- **Security headers** (`nosniff`, `Referrer-Policy`, `X-Frame-Options: SAMEORIGIN`, `Permissions-Policy`) are set in
+  `next.config.ts`. There is no Content-Security-Policy yet.
+- **Spending limits:** set a monthly budget and alerts in the OpenAI dashboard as a last line of defence.
+- Dependabot alerts and security updates are enabled in the GitHub repository settings.
 
 ## Itinerary cache (Upstash Redis)
 

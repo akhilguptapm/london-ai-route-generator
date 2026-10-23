@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { redisCredentials } from "@/lib/redis-env";
+import { hasValidProxySecret, PROXY_CLIENT_IP_HEADER } from "@/lib/proxy-guard";
 
 // Protects /api/generate from burning OpenAI tokens. Only *uncached* generations count: cache hits cost
 // nothing, so they are never limited (the route checks the cache first).
@@ -29,8 +30,17 @@ function getLimiter(): Ratelimit | null {
   return limiter;
 }
 
-/** Best-effort client identifier. On Vercel, x-forwarded-for is set by the platform. */
+/**
+ * Best-effort client identifier.
+ * Behind the Cloudflare Worker, Vercel only sees Cloudflare's IPs, so the Worker passes the real visitor IP in
+ * a header. That header is trusted only when the request also carries the shared proxy secret (otherwise anyone
+ * could spoof it to dodge the limit). Otherwise fall back to x-forwarded-for, which Vercel sets itself.
+ */
 export function getClientId(req: Request): string {
+  if (hasValidProxySecret(req)) {
+    const proxied = req.headers.get(PROXY_CLIENT_IP_HEADER)?.trim();
+    if (proxied) return proxied;
+  }
   const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return forwarded || req.headers.get("x-real-ip")?.trim() || "anonymous";
 }

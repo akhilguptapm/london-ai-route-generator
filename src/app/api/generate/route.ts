@@ -5,6 +5,7 @@ import { GOCITY_ATTRACTIONS } from "@/lib/gocity-attractions";
 import { DayChannel } from "@/lib/day-channel";
 import { buildCacheKey, getCachedItinerary, setCachedItinerary } from "@/lib/itinerary-cache";
 import { checkGenerateRateLimit, getClientId } from "@/lib/rate-limit";
+import { rejectIfNotFromProxy } from "@/lib/proxy-guard";
 import { normalizeTripRequest } from "@/lib/trip-options";
 
 // Each day is planned in its own parallel model call, so total time no longer grows with trip length.
@@ -18,6 +19,10 @@ const DAY_ATTEMPTS = 2;
 const STREAM_HEADERS = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" };
 
 export async function POST(req: Request) {
+  // Only accept requests that came through the Cloudflare Worker (no-op until PLANNER_PROXY_SECRET is set).
+  const blocked = rejectIfNotFromProxy(req);
+  if (blocked) return blocked;
+
   try {
     // Normalise first: it keeps junk out of the prompt and makes equivalent searches share one cache key.
     const trip = normalizeTripRequest(await req.json().catch(() => null));

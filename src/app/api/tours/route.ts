@@ -4,6 +4,7 @@ import {
   searchViatorTours,
 } from "@/lib/viator";
 import type { ToursApiResponse, ViatorTour } from "@/lib/tour-types";
+import { rejectIfNotFromProxy } from "@/lib/proxy-guard";
 
 export const maxDuration = 60;
 
@@ -34,6 +35,10 @@ function isValidFutureDate(value: unknown): value is string {
 const AVAILABILITY_ORDER = { available: 0, unknown: 1, unavailable: 2 } as const;
 
 export async function POST(req: Request) {
+  // Only accept requests that came through the Cloudflare Worker (no-op until PLANNER_PROXY_SECRET is set).
+  const blocked = rejectIfNotFromProxy(req);
+  if (blocked) return blocked;
+
   try {
     const body = await req.json();
 
