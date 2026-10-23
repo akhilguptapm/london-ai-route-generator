@@ -31,12 +31,19 @@ import {
   Users,
   AlertTriangle,
   ArrowRight,
+  ArrowUp,
   ChevronDown,
   Zap,
 } from "lucide-react";
 
 // Must match `basePath` in next.config.ts. Plain fetch() calls are not prefixed automatically.
 const BASE_PATH = "/planner";
+
+// Smooth scroll back to the top of the page (instant for people who prefer reduced motion).
+function scrollToTop() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+}
 
 // Party size used for live Viator price / availability checks (adult pricing).
 const ADULTS_BY_TRAVELERS: Record<string, number> = {
@@ -231,7 +238,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-dvh bg-white text-slate-900 px-3 py-4 sm:p-6 md:p-8 font-sans">
+    <main className="flex-1 bg-white text-slate-900 px-3 py-4 sm:p-6 md:p-8 font-sans">
       <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         {/* Header Section */}
         <header className="text-center space-y-3 py-4 sm:py-6 border-b border-slate-200">
@@ -658,6 +665,22 @@ export default function Home() {
                   />
                 )
               )}
+
+            {/* Back to top, shown once the whole itinerary has finished streaming */}
+            {!isLoading && (itinerary.days?.length ?? 0) > 0 && (
+              <div className="flex flex-col items-center gap-1.5 pt-2 pb-4">
+                <button
+                  type="button"
+                  onClick={scrollToTop}
+                  aria-label="Back to top"
+                  title="Back to top"
+                  className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white border border-slate-300 text-slate-700 shadow-md hover:bg-sky-500 hover:border-sky-500 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 transition cursor-pointer"
+                >
+                  <ArrowUp className="w-5 h-5" />
+                </button>
+                <span className="text-xs font-semibold text-slate-500">Back to top</span>
+              </div>
+            )}
           </div>
         )}
       </div>
