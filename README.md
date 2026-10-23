@@ -130,7 +130,8 @@ Cloudflare Worker and redirect rule changes are made in the Cloudflare dashboard
 
 ```
 src/app/            Pages, layout and API routes (/api/generate, /api/tours)
-src/components/     UI components (tour options, progress, skeletons)
+src/components/     UI components (SiteHeader and SiteFooter copied from londontourpackage.com, tour options, progress, skeletons)
+src/assets/         Logo (imported, so its URL includes the /planner base path)
 src/lib/            AI schema, cache, rate limit, Viator client, pass savings, affiliate links
 scripts/            pregenerate.mjs (cache warm-up)
 next.config.ts      basePath, root redirect, Tailwind and Turbopack setup
