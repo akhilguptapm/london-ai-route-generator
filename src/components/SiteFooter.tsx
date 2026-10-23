@@ -3,6 +3,10 @@ import { SOCIAL_ICON_PATHS } from "@/components/social-icon-paths";
 
 const SITE_URL = "https://londontourpackage.com";
 
+// Hard-coded on purpose: reading the current date in a server component conflicts with Cache Components.
+// Update this each January.
+const COPYRIGHT_YEAR = 2026;
+
 // Same three link columns, in the same order, as the footer on londontourpackage.com.
 const FOOTER_COLUMNS = [
   {
@@ -118,6 +122,12 @@ export function SiteFooter() {
             </div>
           );
         })}
+      </div>
+
+      <div className="border-t border-white/10">
+        <p className="max-w-5xl mx-auto px-5 sm:px-8 py-5 text-center text-xs text-neutral-400">
+          © {COPYRIGHT_YEAR} London Tour Package. All rights reserved.
+        </p>
       </div>
     </footer>
   );
