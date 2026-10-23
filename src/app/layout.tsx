@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: "AI London Itinerary & Custom Tour Planner",
     description:
       "Generate custom London travel routes with live partner pricing and pass savings.",
-    url: "https://tourplanner.londontourpackage.com",
+    url: "https://londontourpackage.com/planner",
     siteName: "London Tour Package",
     type: "website",
   },

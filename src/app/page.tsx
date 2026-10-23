@@ -35,6 +35,9 @@ import {
   Zap,
 } from "lucide-react";
 
+// Must match `basePath` in next.config.ts. Plain fetch() calls are not prefixed automatically.
+const BASE_PATH = "/planner";
+
 // Party size used for live Viator price / availability checks (adult pricing).
 const ADULTS_BY_TRAVELERS: Record<string, number> = {
   "Solo Traveler": 1,
@@ -73,7 +76,7 @@ export default function Home() {
     stop,
     error,
   } = useObject({
-    api: "/api/generate",
+    api: `${BASE_PATH}/api/generate`,
     schema: ItinerarySchema,
     // Peek at the response headers to learn whether this trip came from the cache.
     fetch: async (input, init) => {
@@ -149,7 +152,7 @@ export default function Home() {
     setAltTourData({});
     setToursStatus("loading");
 
-    fetch("/api/tours", {
+    fetch(`${BASE_PATH}/api/tours`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ queries: terms, travelDate: travelDate || undefined, adults }),
@@ -191,7 +194,7 @@ export default function Home() {
     if (altFetchKey.current === key) return;
     altFetchKey.current = key;
 
-    fetch("/api/tours", {
+    fetch(`${BASE_PATH}/api/tours`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ queries: terms, travelDate: travelDate || undefined, adults }),

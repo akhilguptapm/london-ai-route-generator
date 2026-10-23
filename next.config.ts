@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Served at londontourpackage.com/planner via a Cloudflare Worker proxy.
+  basePath: "/planner",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
