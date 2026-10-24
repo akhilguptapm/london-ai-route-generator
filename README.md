@@ -87,7 +87,9 @@ Visitor -> Cloudflare (londontourpackage.com)
 `src/components/SiteHeader.tsx` and `src/components/SiteFooter.tsx` copy the header and footer of londontourpackage.com
 so the planner feels like part of the site. They are rendered by `src/app/layout.tsx`.
 
-- **Header:** logo (`src/assets/logo.png`), tagline, and the six main-menu links (`NAV_LINKS`), with a hamburger menu on phones.
+- **Header:** logo (`src/assets/logo.png`), tagline, and the six main-menu links (`PLANNER_LINK` plus `NAV_LINKS`), with a hamburger menu on phones.
+  "AI Route Planner" comes first and is styled as the active item (navy pill on desktop). Its NEW badge hides itself from
+  21 Feb 2027 (`NEW_BADGE_UNTIL`), the same date as the WPCode snippet on WordPress, so change both together.
 - **Footer:** three link columns (`FOOTER_COLUMNS`), social icons (`SOCIAL_LINKS`, shapes in `src/components/social-icon-paths.ts`),
   an email link, and a copyright line.
 - All links are absolute URLs to the live main site. When pages are added, renamed or removed in WordPress, update the lists

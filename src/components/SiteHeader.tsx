@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 // Imported (not referenced by a "/logo.png" string) so the URL automatically includes the /planner basePath.
@@ -8,18 +8,32 @@ import logo from "@/assets/logo.png";
 
 const SITE_URL = "https://londontourpackage.com";
 
-// Same six main-menu items, in the same order, as the London Tour Package website.
+// The "AI Route Planner" menu item: this app. It is a red pill on desktop and bold red text on phones,
+// with a NEW badge that hides itself on the same date as the WordPress badge (see NEW_BADGE_UNTIL).
+const PLANNER_LINK = { label: "AI Route Planner", href: `${SITE_URL}/planner` } as const;
+
+// Hide the NEW badge from 21 Feb 2027 (120 days after launch on 24 Oct 2026), London time.
+// This must match the expiry date in the WPCode snippet on the WordPress site.
+const NEW_BADGE_UNTIL = Date.UTC(2027, 1, 21); // month is 0-based: 1 = February
+
+const subscribeNever = () => () => {}; // the date never "changes" while the page is open
+const badgeStillValid = () => Date.now() < NEW_BADGE_UNTIL;
+
+// The other five main-menu items, in the same order as the London Tour Package website
+// (Appearance > Menus > "Main" in WordPress). Keep these and PLANNER_LINK in sync with that menu.
 const NAV_LINKS = [
   { label: "Attractions", href: `${SITE_URL}/london-attractions/` },
   { label: "Tours", href: `${SITE_URL}/category/tours/` },
   { label: "Restaurants & Pubs", href: `${SITE_URL}/category/restaurants/` },
-  { label: "Entertainment", href: `${SITE_URL}/category/entertainment/` },
   { label: "Getting Around", href: `${SITE_URL}/getting-around-in-london/` },
   { label: "Accommodation", href: `${SITE_URL}/accommodation-in-london/` },
 ] as const;
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  // The server always renders the badge; the browser checks the date after the page loads (this avoids reading
+  // the current time during server rendering, which conflicts with Cache Components).
+  const showNewBadge = useSyncExternalStore(subscribeNever, badgeStillValid, () => true);
 
   return (
     <header className="bg-white border-b border-slate-200">
@@ -60,6 +74,24 @@ export function SiteHeader() {
         className={`${menuOpen ? "block" : "hidden"} md:block border-t border-slate-200`}
       >
         <ul className="max-w-5xl mx-auto px-3 sm:px-6 md:px-8 flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-center md:gap-x-8 py-1 md:py-0">
+          {/* AI Route Planner: this page, so it is shown as the active (navy) item */}
+          <li className="relative border-b border-slate-100 md:border-b-0">
+            <a
+              href={PLANNER_LINK.href}
+              aria-current="page"
+              className="block py-3 text-sm font-bold uppercase tracking-wide text-[#0B2A6B] md:text-white md:bg-[#0B2A6B] md:rounded-full md:px-3 md:py-1.5 md:my-1.5 transition-colors"
+            >
+              <span aria-hidden="true" className="mr-1.5 text-[0.8em]">
+                ✦
+              </span>
+              {PLANNER_LINK.label}
+              {showNewBadge && (
+                <span className="ml-2 rounded-lg bg-[#0B2A6B] px-1.5 py-0.5 align-middle text-[10px] font-semibold leading-tight tracking-wide text-white md:absolute md:-right-2 md:-top-1 md:ml-0 md:border md:border-white md:px-1.5 md:py-px md:text-[8px] md:bg-[#C8102E]">
+                  NEW
+                </span>
+              )}
+            </a>
+          </li>
           {NAV_LINKS.map(({ label, href }) => (
             <li key={label} className="border-b border-slate-100 last:border-b-0 md:border-b-0">
               <a
