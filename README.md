@@ -6,6 +6,10 @@ AI itinerary planner for [London Tour Package](https://londontourpackage.com). V
 
 ![London AI Route Planner](docs/planner.png)
 
+The planner ships on [London Tour Package](https://londontourpackage.com), the travel site I run:
+
+![London Tour Package homepage](docs/londontourpackage.jpg)
+
 ## Features
 
 - **Real-time itinerary generation** — each day is planned in parallel and streams in as soon as it is ready
