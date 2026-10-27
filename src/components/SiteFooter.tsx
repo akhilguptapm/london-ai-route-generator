@@ -125,9 +125,13 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/10">
-        <p className="max-w-5xl mx-auto px-5 sm:px-8 py-5 text-center text-xs text-neutral-400">
-          © {COPYRIGHT_YEAR} London Tour Package. All rights reserved.
-        </p>
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 py-5 text-center text-xs text-neutral-400 space-y-2">
+          <p>© {COPYRIGHT_YEAR} London Tour Package. All rights reserved.</p>
+          <p>
+            Some links are affiliate links (Viator, Go City / Travelpayouts). If you book through
+            them, we may earn a commission at no extra cost to you.
+          </p>
+        </div>
       </div>
     </footer>
   );

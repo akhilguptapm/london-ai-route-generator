@@ -2,8 +2,9 @@
 
 AI itinerary planner for [London Tour Package](https://londontourpackage.com). Visitors pick trip length, pace, who they are travelling with and what they want to see. The app streams a day-by-day London route with tube tips, live tour tickets and London Pass savings.
 
-**Live demo:** [london-ai-route-generator.vercel.app](https://london-ai-route-generator.vercel.app)  
-**Production:** [londontourpackage.com/planner](https://londontourpackage.com/planner)
+**Live:** [londontourpackage.com/planner](https://londontourpackage.com/planner)
+
+![London AI Route Planner](docs/planner.png)
 
 ## Features
 
@@ -72,3 +73,17 @@ src/lib/            AI schema, cache, rate limit, Viator client, pass savings
 scripts/            Cache warm-up (pregenerate.mjs)
 cloudflare/         Reference copy of the Cloudflare Worker
 ```
+
+## Known limitations / next steps
+
+- Tour lookup is skipped if the Viator key is missing; the itinerary still renders without live prices.
+- Pass savings are an estimate from published gate prices and live Viator entry rates, not a booking quote.
+- Very unusual trip combinations are generated live; popular ones are served from cache. That keeps cost down, but first-time odd queries are slower.
+- There is no save/share or account. Closing the tab loses the plan.
+- Affiliate click-through is not yet attributed back to a specific itinerary.
+
+Next: persist and share plans, track which itineraries convert on Viator and Go City, and surface live TfL disruption on the transit tips.
+
+## Affiliate disclosure
+
+London Tour Package participates in affiliate programmes including Viator and Go City (via Travelpayouts). Some booking links in this app are affiliate links. If you buy through them, the site may earn a commission at no extra cost to you.
