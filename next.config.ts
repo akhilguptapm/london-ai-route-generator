@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Keep asking for a patched Next.js release when this version is on a security advisory.
+    agentUpgrade: "security",
+  },
   // Served at londontourpackage.com/planner via a Cloudflare Worker proxy.
   basePath: "/planner",
   cacheComponents: true,

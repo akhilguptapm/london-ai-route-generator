@@ -14,20 +14,35 @@ import { hasValidProxySecret, PROXY_CLIENT_IP_HEADER } from "@/lib/proxy-guard";
 export const RATE_LIMIT_REQUESTS = 6;
 export const RATE_LIMIT_WINDOW = "10 m" as const;
 
+/** Saves are cheap compared with generation, but a public endpoint still needs a cap. */
+export const SHARE_RATE_LIMIT_REQUESTS = 20;
+export const SHARE_RATE_LIMIT_WINDOW = "10 m" as const;
+
+function buildLimiter(requests: number, window: `${number} ${"s" | "m" | "h" | "d"}`, prefix: string): Ratelimit | null {
+  const creds = redisCredentials();
+  if (!creds) return null;
+  return new Ratelimit({
+    redis: new Redis(creds),
+    limiter: Ratelimit.slidingWindow(requests, window),
+    prefix,
+    timeout: 1500, // if Redis is slow, let the request through rather than stall the user
+  });
+}
+
 let limiter: Ratelimit | null | undefined; // undefined = not initialised yet
 function getLimiter(): Ratelimit | null {
   if (limiter === undefined) {
-    const creds = redisCredentials();
-    limiter = creds
-      ? new Ratelimit({
-          redis: new Redis(creds),
-          limiter: Ratelimit.slidingWindow(RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW),
-          prefix: "ratelimit:generate",
-          timeout: 1500, // if Redis is slow, let the request through rather than stall the user
-        })
-      : null;
+    limiter = buildLimiter(RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW, "ratelimit:generate");
   }
   return limiter;
+}
+
+let shareLimiter: Ratelimit | null | undefined;
+function getShareLimiter(): Ratelimit | null {
+  if (shareLimiter === undefined) {
+    shareLimiter = buildLimiter(SHARE_RATE_LIMIT_REQUESTS, SHARE_RATE_LIMIT_WINDOW, "ratelimit:share");
+  }
+  return shareLimiter;
 }
 
 /**
@@ -47,15 +62,22 @@ export function getClientId(req: Request): string {
 
 export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
-export async function checkGenerateRateLimit(clientId: string): Promise<RateLimitResult> {
-  const rl = getLimiter();
+async function runLimit(rl: Ratelimit | null, clientId: string, label: string): Promise<RateLimitResult> {
   if (!rl) return { allowed: true };
   try {
     const { success, reset } = await rl.limit(clientId);
     if (success) return { allowed: true };
     return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((reset - Date.now()) / 1000)) };
   } catch (error) {
-    console.error("[rate-limit] check failed, allowing request:", error);
+    console.error(`[rate-limit] ${label} check failed, allowing request:`, error);
     return { allowed: true };
   }
+}
+
+export function checkGenerateRateLimit(clientId: string): Promise<RateLimitResult> {
+  return runLimit(getLimiter(), clientId, "generate");
+}
+
+export function checkShareRateLimit(clientId: string): Promise<RateLimitResult> {
+  return runLimit(getShareLimiter(), clientId, "share");
 }

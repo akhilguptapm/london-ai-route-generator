@@ -23,6 +23,18 @@ export const TRAVELER_TYPES = [
   "Group of Friends",
 ] as const;
 
+/** Party size used for live Viator price and availability checks (adult pricing). */
+export const ADULTS_BY_TRAVELERS: Record<string, number> = {
+  "Solo Traveler": 1,
+  "Couple / 2 Adults": 2,
+  "Family with Kids": 4,
+  "Group of Friends": 4,
+};
+
+export function adultsForTravelers(travelers: string): number {
+  return ADULTS_BY_TRAVELERS[travelers] ?? 2;
+}
+
 export const DEFAULT_PACE = "Balanced";
 export const DEFAULT_TRAVELERS = "Couple / 2 Adults";
 export const DEFAULT_INTERESTS: string[] = ["Historical Palaces", "Museums", "Food & Markets"];

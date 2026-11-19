@@ -1,4 +1,3 @@
-import { Mail } from "lucide-react";
 import { SOCIAL_ICON_PATHS } from "@/components/social-icon-paths";
 
 const SITE_URL = "https://londontourpackage.com";
@@ -62,7 +61,7 @@ const columnTitleClass = "text-xs font-normal uppercase tracking-[0.4em] text-wh
 export function SiteFooter() {
   return (
     <footer className="bg-black text-white mt-8 sm:mt-12">
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 py-10 sm:py-14 grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-10 sm:pt-14 pb-4 grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
         {FOOTER_COLUMNS.map((column, columnIndex) => {
           const isLast = columnIndex === FOOTER_COLUMNS.length - 1;
           return (
@@ -82,9 +81,9 @@ export function SiteFooter() {
               {isLast && (
                 <div className="mt-10">
                   <h2 className={columnTitleClass}>Follow Us</h2>
-                  <ul className="flex flex-wrap items-center gap-x-5 gap-y-4">
+                  <ul className="flex flex-nowrap items-center gap-x-2">
                     {SOCIAL_LINKS.map(({ label, href, icon }) => (
-                      <li key={label}>
+                      <li key={label} className="shrink-0">
                         <a
                           href={href}
                           target="_blank"
@@ -95,8 +94,8 @@ export function SiteFooter() {
                         >
                           <svg
                             viewBox="0 0 24 24"
-                            width="22"
-                            height="22"
+                            width="18"
+                            height="18"
                             fill="currentColor"
                             aria-hidden="true"
                             focusable="false"
@@ -106,16 +105,6 @@ export function SiteFooter() {
                         </a>
                       </li>
                     ))}
-                    <li>
-                      <a
-                        href="mailto:info@londontourpackage.com"
-                        aria-label="Email"
-                        title="Email"
-                        className="block text-white/90 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white transition-colors"
-                      >
-                        <Mail className="w-[22px] h-[22px]" aria-hidden="true" />
-                      </a>
-                    </li>
                   </ul>
                 </div>
               )}
@@ -125,12 +114,8 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 py-5 text-center text-xs text-neutral-400 space-y-2">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-3 pb-3 text-center text-xs text-neutral-400">
           <p>© {COPYRIGHT_YEAR} London Tour Package. All rights reserved.</p>
-          <p>
-            Some links are affiliate links (Viator, Go City / Travelpayouts). If you book through
-            them, we may earn a commission at no extra cost to you.
-          </p>
         </div>
       </div>
     </footer>
