@@ -204,7 +204,7 @@ export default function Home() {
             </div>
 
             {/* Travel Date (optional) */}
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0 max-w-full">
               <label
                 htmlFor="travelDate"
                 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2"
@@ -217,17 +217,17 @@ export default function Home() {
                 value={travelDate}
                 min={minDate || undefined}
                 onChange={(e) => setTravelDate(e.target.value)}
-                className="block w-full min-w-0 min-h-12 bg-white border border-slate-300 rounded-lg p-3 text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                className="block w-full max-w-full min-w-0 min-h-12 max-sm:appearance-none bg-white border border-slate-300 rounded-lg p-3 text-base sm:text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Interests Pills */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          <div className="space-y-3 sm:space-y-2">
+            <span className="block text-center sm:text-left text-xs font-bold uppercase tracking-wider text-slate-600">
               Select Your Interests
             </span>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2.5 sm:gap-2">
               {AVAILABLE_INTERESTS.map((interest) => {
                 const active = selectedInterests.includes(interest);
                 return (
@@ -236,7 +236,7 @@ export default function Home() {
                     key={interest}
                     aria-pressed={active}
                     onClick={() => toggleInterest(interest)}
-                    className={`px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-medium transition-all ${
+                    className={`px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-full text-sm sm:text-xs font-medium transition-all ${
                       active
                         ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"

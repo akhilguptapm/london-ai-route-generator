@@ -37,7 +37,7 @@ export function adultsForTravelers(travelers: string): number {
 
 export const DEFAULT_PACE = "Balanced";
 export const DEFAULT_TRAVELERS = "Couple / 2 Adults";
-export const DEFAULT_INTERESTS: string[] = ["Historical Palaces", "Museums", "Food & Markets"];
+export const DEFAULT_INTERESTS: string[] = ["Historical Palaces"];
 export const DEFAULT_START_LOCATION = "Central London";
 export const MIN_DAYS = 1;
 export const MAX_DAYS = 7;

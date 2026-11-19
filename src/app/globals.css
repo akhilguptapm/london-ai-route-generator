@@ -68,3 +68,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* iOS gives date fields a minimum width that ignores width: 100% and runs past the card. */
+input[type="date"] {
+  -webkit-min-logical-width: 0;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+}
